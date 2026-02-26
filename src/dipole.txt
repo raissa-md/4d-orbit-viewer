@@ -1,0 +1,58 @@
+!
+!  dipole.txt
+!
+!  dipole angles vs. year, where year is a multiple of 5, between
+!  1965 and 2005, inclusive.  In the abscence odf this file,
+!  the SSC file maintains a set of defaults.  The environment variable,
+!  DIPOLE_DATA is used to specify name and location of this file
+!  and can be found in the sscrc file.
+!
+!   File format:
+!
+!   a line beginning with an exclamation point (!) is a comment
+!   all other lines consist of a year (4 digits), followed by
+!   its corresponding colatitude and longitude of the dipole in
+!   decimal degrees.
+!   These 3 fields are delimited by one or more blanks
+!
+!
+!    SSC v2.2
+!    Douglas J. Hoffman
+!    Hughes STX
+!    1/25/94
+!
+!1965  11.435 -69.761
+!1970  11.41  -70.2
+!1975  11.398 -70.454
+!1980  11.200 -70.756
+!1985  11.018 -70.905
+!1990  10.872 -71.115
+!1995  10.730 -71.381
+!2000  10.588 -71.647
+!2005  10.446 -71.913
+! The numbers above are old. Here are new numbers. RCJ 08/06/2003
+!1965 11.465 -69.854
+!1970 11.409 -70.177
+!1975 11.313 -70.470
+!1980 11.194 -70.759
+!1985 11.026 -70.896
+!1990 10.862 -71.127
+!1995 10.704 -71.407
+!2000 10.458 -71.572
+!2005 10.251 -71.735
+!  YYYY   COLAT   -(360-LON)  as calculated by Sardi's gmpole.for 
+!                            (under /home/johnson/Fortran)(RCJ 04/04/2011)
+!  Coeffs from http://www.ngdc.noaa.gov/IAGA/vmod/igrf11coeffs.txt
+1965 11.465 -69.854
+1970 11.409 -70.177
+1975 11.313 -70.470
+1980 11.194 -70.759
+1985 11.026 -70.896
+1990 10.862 -71.127
+1995 10.677 -71.416
+2000 10.457 -71.570
+2005 10.252 -71.805
+2010 09.984 -72.211
+2015 09.687 -72.613
+2020 09.411 -72.680
+

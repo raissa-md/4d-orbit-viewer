@@ -1,0 +1,255 @@
+ace 249,200,61 cube solid H 720
+active 242,10,231 diamond solid L
+aec * * * L
+aed * * * L
+aee * * * L 
+aerocube6a 102,102,255 sphere solid L
+aerocube6b 204,102,0 sphere solid L
+aim 105,255,18 sphere solid L
+akebono 139,209,233 sphere solid L
+alouette1 73,152,143 sphere solid K
+alouette2 194,57,86 sphere solid K
+apex 89,111,185 cone solid L
+aqua 0,102,255 sphere solid L
+arase 102,83,120 sphere solid K
+araseplanned 102,83,120 sphere solid K
+ariel4 255,255,204 sphere solid L
+artemisp1 230,10,10 cube solid M
+artemisp1pred 230,10,10 cube solid M
+artemisp2 10,230,10 sphere solid M 
+artemisp2pred 10,230,10 sphere solid M 
+astrid2 12,60,216 cylinder solid L 
+aura 153,153,255 sphere solid L 
+bepicolombo * * * X
+biosentinel * * * X
+calipso 204,0,204 sphere solid L 
+cassini * * * X
+cassiope 51,102,255 sphere solid L 
+cce 91,127,144 sphere solid L 
+champ 250,250,76 sphere solid L 
+chandra 114,247,239 sphere solid K
+chibism 155,102,100 sphere solid L 
+cloudsat 0,102,102 sphere solid L 
+cluster1 187,183,183 cube solid K
+cluster2 255,101,50 diamond dash K
+cluster3 141,219,2 sphere dot K
+cluster4 209,159,251 cone solid K
+cnofs 204,204,0 sphere solid L 
+comet21pgz * * * X
+comethalley * * * X
+crres 49,135,100 cylinder solid L 
+csswe 104,104,0 sphere solid L 
+dawn 200,210,235 sphere solid X
+de1 152,177,249 diamond solid L 
+de2 104,122,185 cube solid L 
+demeter 166,227,240 sphere solid L
+dmea 38,173,5 sphere solid L
+dmspf06 233,117,182 cone solid L
+dmspf07 78,28,246 cylinder solid L
+dmspf08 191,23,110 sphere solid L
+dmspf09 2,141,198 cone solid L
+dmspf10 33,217,182 cone solid L
+dmspf11 78,78,246 cylinder solid L
+dmspf12 191,23,90 sphere solid L
+dmspf13 242,241,98 cone solid L
+dmspf14 110,196,241 diamond solid L
+dmspf15 56,110,89 cube solid L
+dmspf16 213,206,89 cylinder solid L
+dmspf17 224,109,45 sphere solid L
+dmspf18 255,204,255 sphere solid L
+dmspf19 73,245,178 cone solid L
+doublestar1 109,12,88 diamond solid K
+doublestar2 110,212,235 cube solid K
+dscovr 153,0,0 sphere solid H 720
+dsxset * * * K
+elfina 51,102,255 sphere solid L
+elfinapred 51,102,255 sphere solid L
+elfinb 255,0,0 sphere solid L
+elfinbpred 255,0,0 sphere solid L
+equators 230,35,201 cylinder solid L
+explorer45 208,234,39 sphere solid L
+fast 237,232,196 sphere solid L
+firebird3 255,102,51 sphere solid L
+firebird4 255,255,102 sphere solid L
+freja 33,170,132 cone solid L
+galileo * * * X
+gatewayconc * * * 4320
+gcomw1 37,32,96 sphere solid Y
+genesis 29,230,71 diamond solid H 3600
+geotail 180,183,98 cube solid K 720
+geotailpred 180,183,98 cube solid K 720
+giotto * * * X
+gms3 179,35,213 cylinder solid G
+goce * * * L
+goes10 161,218,18 sphere solid G
+goes11 178,145,173 cone solid G 180
+goes12 244,1,89 diamond solid G 
+goes13 221,101,95 sphere solid G 180
+goes14 153,204,255 sphere solid G 180
+goes15 255,153,153 sphere solid G 180
+goes16 0,204,255 sphere solid G
+goes17 * * * G
+goes18 * * * G
+goes6 78,94,247 cube solid G 180
+goes7 153,9,24 cylinder solid G 180
+goes8 100,230,140 sphere solid G
+goes9 255,153,255 cone solid G
+gold * * * G
+goldc * * * G
+gosat 143,199,39 sphere solid Y
+grace1 205,103,205 sphere solid L
+grace2 0,184,221 sphere solid L
+gracefo1 * * * P
+gracefo2 * * * P
+hawkeye 125,196,32 diamond solid K 180
+helios1 * * * X
+helios2 * * * X
+hinode 255,255,102 sphere solid L
+ibex * * * K
+ice * * * X
+icon * * * L
+iconpred 88,158,231 sphere solid L
+image 91,97,217 cube solid K 120
+imp7 29,250,89 cylinder solid K 720
+imp8 77,197,211 sphere solid K 300
+interballaurora 239,20,94 diamond solid K
+interballtail 165,125,232 cube solid K 180
+iris * * * 
+irm 222,176,23 cylinder solid G 720
+isee1 35,223,18 sphere solid K
+isee1old 111,222,105 sphere solid K
+isee2 204,204,0 sphere solid K
+isee3 134,134,250 cone solid X 720
+isis1 178,155,203 sphere solid L
+isis2 247,247,73 sphere solid L
+iss 35,229,7 sphere solid L
+issb 102,102,255 sphere solid L
+jason2 40,144,40 sphere solid L
+juice * * * X
+juno 255,170,1 sphere solid X
+jupiter * * * X
+kepler 255,215,219 sphere solid X
+kplo * * * M
+l1sat * * * X
+landsat7 * * * Y
+landsat8 * * * Y
+landsat9 * * * Y
+lanl01 240,56,150 diamond solid G 180
+lanl02 179,107,122 cube solid G 180
+lanl89 223,252,93 cylinder solid G 180
+lanl90 254,1,166 sphere solid G 180
+lanl91 36,131,230 cone solid G 180
+lanl94 114,181,221 diamond solid G 180
+lanl97 154,135,43 cube solid G 180
+lro 26,126,63 sphere solid M
+mars 204,51,0 sphere solid X
+maven 204,101,35 sphere solid X
+mercury 211,211,211 sphere solid X
+messenger 153,146,112 sphere solid X
+metop1b 134,223,34 sphere solid Y
+metop2a 234,123,134 sphere solid Y
+mgs * * * X
+microlab1 228,141,69 cylinder solid L
+mir 74,205,120 cube solid L
+mms1 245,245,245 diamond solid G
+mms1ltpred * * * G
+mms1pred 245,245,245 diamond solid G
+mms2 213,94,0 sphere solid G
+mms2pred 213,94,0 sphere solid G
+mms3 0,158,115 cone solid G
+mms3pred 0,158,115 cone solid G
+mms4 86,180,233 sphere solid G
+mms4pred 86,180,233 sphere solid G
+moon 214,211,211 sphere solid C
+mro 255,92,46 sphere solid X
+msl * * * X
+msx 68,147,254 cube solid L
+neptune * * * X
+newhorizons * * * X
+noaa10 207,207,40 sphere solid L
+noaa12 147,7,187 cylinder solid L
+noaa14 77,161,27 sphere solid L
+noaa15 177,90,7 cone solid L
+noaa16 81,98,236 diamond solid L
+noaa17 131,66,72 cube solid L
+noaa18 173,176,136 cube solid L
+noaa19 255,255,102 sphere solid L
+noaa20 * * * Y
+noaa21 * * * Y
+noaa5 255,204,204 sphere solid L
+noaa6 112,194,204 sphere solid L
+noaa7 204,204,214 sphere solid L
+noaa8 228,99,51 sphere solid L
+oersted 11,210,110 cylinder solid L
+ogo5 212,212,17 sphere solid L
+ogo6 67,52,245 sphere solid L
+ohzora 242,249,36 cone solid L
+orx * * * X
+parasol 167,152,145 sphere solid Y
+parkersp * * * 1200
+parkersppred * * * 1200
+pioneer10 * * * X
+pioneer11 * * * X
+pluto * * * X
+polar 199,63,148 diamond solid K 180
+psyche * * * 
+rbspa 255,51,0 sphere solid K
+rbspaextended 255,51,0 diamond solid Κ
+rbspapred 255,51,0 sphere solid K
+rbspb 51,102,255 sphere solid K
+rbspbextended 51,102,255 sphere solid K
+rbspbpred 51,102,255 sphere solid K
+reimei 140,243,27 cube solid P
+rhessi 255,0,51 cone solid L
+rocsat1 220,244,31 sphere solid L
+rosetta 153,153,255 sphere solid L
+sampex 240,157,14 cylinder solid P
+saturn * * * X
+scatha 226,239,111 sphere solid L
+sdo 111,222,234 sphere solid G
+smilepredict * * * K 600
+snoe 244,222,250 cone solid P
+soho 151,193,142 diamond solid H 720
+sohoold 151,193,142 diamond solid H 720
+solarorbiter * * * X
+sorce 255,51,51 sphere solid L
+spitzer 204,212,8 sphere solid X
+sport * * * L
+sputnik1 255,102,0 sphere solid L
+st5a 102,163,121 sphere solid L
+st5b 42,204,175 cone solid L
+st5c 167,82,202 sphere solid L
+stereoa 168,232,65 sphere solid X 720
+stereob 153,153,255 diamond solid X 720
+sun 255,152,68 sphere solid X
+suomi 51,204,255 sphere solid Y
+swarma 255,0,0 sphere solid L
+swarmb 255,105,7 sphere solid L
+swarmc 255,209,1 sphere solid L
+tatiana1 209,53,209 sphere solid L
+tatiana2 26,239,111 sphere solid L
+themisa 209,53,209 cylinder solid L
+themisapred 209,53,209 cylinder dash L
+themisb 230,10,10 cube solid L 
+themisbpred 230,10,10 cube dash L
+themisc 10,230,10 sphere solid L
+themiscpred 10,230,10 diamond dash L
+themisd 10,240,240 diamond solid L
+themisdpred 10,240,240 sphere dash L
+themise 10,85,230 cone solid L
+themisepred 10,85,230 cone dash L
+timed 190,231,15 sphere solid L
+trace 207,163,255 diamond solid L
+tse2017c 204,204,204 sphere solid 2
+twins1 220,244,31 sphere solid K 120
+twins2 255,0,51 sphere solid K 120
+uars 6,162,10 cone solid
+ulysses * * * X
+uranus * * * X
+venus * * * X
+viking 249,213,67 cube solid X
+voyager1 * * * X
+voyager2 * * * X
+wind 238,136,108 diamond solid X 720
+xmm 204,0,51 sphere solid K
+yohkoh 240,227,125 sphere solid L

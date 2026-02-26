@@ -1,0 +1,250 @@
+
+:root {
+  --button_req_height: 48px ;
+  --button_req_width: 48px ;
+}
+
+/* Base styles for the button */
+.VUI-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  transition: filter 0.15s, background 0.15s;
+  border-radius: 4px; /* feels good for icons without looking like a pill */
+}
+
+/* Hover on ghost icon button */
+.VUI-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+}
+
+/* Active / pressed */
+.VUI-btn:active:not(:disabled) {
+  background: var(--color-bg-active);
+}
+
+/* Disabled state */
+.VUI-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Focus ring */
+.VUI-btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* For icon-only buttons: avoid image shifting */
+.VUI-btn img {
+  display: block;
+}
+
+.VUI-btn-selected {
+  background: #404096 ;
+}
+
+.VUI-btn-dark-mode {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.VUI-btn-small {
+  height: calc(.55 * var(--button_req_height));
+  width:  calc(.55 * var(--button_req_width));
+}
+
+.VUI-btn-standard {
+  height: calc(.7 * var(--button_req_height));
+  width:  calc(.7 * var(--button_req_width));
+}
+
+.VUI-btn-large {
+  height: calc(1.2 * var(--button_req_height));
+  width:  calc(1.2 * var(--button_req_width));
+}
+
+.VUI-btn-med {
+  height: calc(.9 * var(--button_req_height));
+  width:  calc(.9 * var(--button_req_width));
+}
+
+.VUI-btn-spdf {
+  height: calc(.7 * var(--button_req_height));
+  width:  calc(1.2 * var(--button_req_width));
+}
+
+.VUI-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadein 0.15s ease;
+}
+
+.VUI-modal-container {
+  border-radius: 8px;
+  background-clip: padding-box;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  width: 95%;
+  height: 90%;
+  pointer-events: all;
+  animation: pop 0.15s ease;
+}
+
+.VUI-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.VUI-modal-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.VUI-modal-body {
+  padding: 1rem;
+  overflow-y: auto;
+  scrollbar-gutter: stable ;
+  flex: 1;
+}
+
+.VUI-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pop {
+  from { transform: scale(0.96); }
+  to { transform: scale(1); }
+}
+
+.VUI-checkbox-container {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 0.4rem;
+}
+
+.VUI-checkbox-container input {
+  display: none;
+}
+
+.VUI-checkbox-box {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #333333;
+  border-radius: 3px;
+  background: white;
+  position: relative;
+}
+
+.VUI-checkbox-container input:checked + .VUI-checkbox-box {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.VUI-checkbox-container input:checked + .checkbox-box::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: rgb(163, 40, 40);
+}
+
+.VUI-checkbox-label {
+  user-select: none;
+}
+
+.VUI-radio-container {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 0.4rem;
+}
+
+.VUI-radio-container input {
+  display: none;
+}
+
+.VUI-radio-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  padding : 2px;
+  border: 2px solid #444444;
+  background: transparent;
+  position: relative;
+}
+
+.VUI-radio-container input:checked + .VUI-radio-dot::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: #2563eb;
+  border-radius: 50%;
+}
+
+.VUI-radio-label {
+  user-select: none;
+}
+
+.VUI-dropdown-root {
+  position: relative ;
+  display: flex ;
+  flex-direction: column ;
+  justify-content: flex-start;
+  align-items: center ;
+}
+
+.VUI-dropdown-trigger {
+  display: inline-block;
+}
+
+.VUI-dropdown-menu {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-bubble {
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  scale: 0.95 ; 
+  animation: fadein 0.12s ease forwards;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  z-index: 9999;
+}
+
+/* Simple fade */
+@keyframes fadein {
+  to { opacity: 1; }
+}
