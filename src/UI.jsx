@@ -311,9 +311,6 @@ function position_to_CSS (target_pos, offset="100px", anchor_pos="center")
     style.top = (top * 100).toString () + "%"
     style.left = (left * 100).toString () + "%"
 
-    console.log ("anchor_pos: ", anchor_pos, " top: ", style.top, " left: ", style.left)
-    console.log ("target_pos: ", target_pos, " new_transform: ", new_transform)
-
     return style 
     }
 
@@ -323,13 +320,9 @@ function measure_text_width (text, font)
     const ctx = canvas.getContext ('2d')
     ctx.font = font
 
-    console.log ("measuring text:", text, "with font:", font)
-
     const w = ctx.measureText ('Y').width
 
     const r = w * text.length
-
-    console.log ("character width", w, "estimated width", r)
 
     return r
     }
@@ -1012,19 +1005,60 @@ export class V_Tooltip extends React.Component
         {
         if  (this.tooltip_ref?.current) 
             {
-            this.set_tooltip_width (this.props.maxwidth)
+            if  (this.tooltip_ref.current.style.visibility === "hidden")
+                {
+                this.set_tooltip_width (this.props.maxwidth)
 
+                const r = this.tooltip_ref.current.getBoundingClientRect ()
+
+                const buffer = 15
+
+                // Check if the tooltip is out of viewport, if it is adjust its position.
+                let top = 0
+                let left = 0
+
+                if  (r.top < buffer)
+                    {
+                    top = (r.top * -1) + buffer
+                    }
+
+                if  (r.left < buffer)
+                    {
+                    console.log ("Tooltip left out of bounds:", r.left)
+                    left = (r.left * -1) + buffer
+                    }
+
+                if  (r.right > (window.innerWidth - buffer))
+                    {
+                    left = window.innerWidth - r.width - buffer
+                    }   
+
+                if  (r.bottom > (window.innerHeight - buffer))
+                    {
+                    top = window.innerHeight - r.height - buffer
+                    }
+
+                if  (top !== 0 || left !== 0)
+                    {
+                    const {align, offset} = this.props
+
+                    const transform = (position_to_transform (align, offset))
+
+                    transform.dx = transform.dx + left
+                    transform.dy = transform.dy + top
+
+                    this.tooltip_ref.current.style.transform = make_transform_string (transform)
+                    }
+                }
+
+            /*  This needs to be rewritten
             if  (prevProps.align !== this.props.align || prevProps.offset !== this.props.offset)
                 {
                 const {align, offset} = this.props
 
                 const transform = this.tooltip_ref.current.style.transform
 
-                console.log (">>>> current transform: ", transform)
-
                 const new_transform =  make_transform_string (position_to_transform (align, offset))
-
-                console.log (">>>> new transform: ", new_transform)
 
                 // Update the transform only if it has changed.
                 // This prevents unnecessary style updates which can cause jank.
@@ -1032,10 +1066,10 @@ export class V_Tooltip extends React.Component
                 if  (transform !== new_transform)
                     {
                     this.tooltip_ref.current.style.transform = new_transform
-                    console.log ("Updating tooltip transform")
                     }
                     
                 }
+            */
             }
         }            
 
