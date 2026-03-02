@@ -300,7 +300,7 @@ class Icon_Bar extends React.Component
 
         const menu_button = 
         <V_Tooltip    
-            align="bottom-right" 
+            align="bottom" 
             background={TT_BGCOLOR}
             offset="10px"
             text={`Open a panel allowing the user to select both the observatories 
