@@ -1,3 +1,7 @@
+/*
+* Licensed under the Apache License, Version 2.0.
+*/
+
 import React from 'react'
 import './App.css'
 //import 'antd/dist/antd.css'
