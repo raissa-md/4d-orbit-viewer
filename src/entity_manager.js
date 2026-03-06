@@ -297,6 +297,7 @@ export class entity
         return Frame_to_DS (GSE_to_ANY (gse, system, t))
         }
 
+    /* No longer used.
     orbit_to_WS (index, frame = this._orbit_ref_frame)
         {
         const gse = xyz (this._orbit [index])
@@ -304,6 +305,7 @@ export class entity
 
         return GSE_to_WS (GSE_to_Frame (gse, t, frame))
         }
+    */
 
     /* No longer used.
     set_frame (frame = REF_FRAME.ECI)
