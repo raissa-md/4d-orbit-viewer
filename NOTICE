@@ -1,0 +1,20 @@
+4D Orbit Viewer
+Copyright 2026 United States Government as represented by the Administrator 
+of the National Aeronautics and Space Administration. All Rights Reserved.
+
+This product includes software developed by the Space Physics Data Facility (SPDF) 
+at NASA/Goddard Space Flight Center (https://spdf.gsfc.nasa.gov/).
+
+This product includes software from the following third-party projects:
+
+* Ant Design (antd) - Copyright (c) Ant Design Team (https://ant.design/)
+* React, React-DOM, and Prop-Types - Copyright (c) Meta Platforms, Inc. and affiliates.
+* Three.js - Copyright (c) 2010-2026 three.js authors (https://threejs.org/)
+* Moment.js - Copyright (c) JS Foundation and other contributors.
+* Flatpickr - Copyright (c) Gregory Belhumeur
+* React-Markdown & Remark-GFM - Copyright (c) Titus Wormer <tituswormer@gmail.com>
+* Sprintf-js - Copyright (c) 2013-2014, Alexandru Marasteanu <hello at alexei dot ro>
+* File-saver - Copyright (c) 2016 Eli Grey.
+* p-retry - Copyright (c) Sindre Sorhus <sindresorhus@gmail.com>
+* React-color - Copyright (c) 2015 Case Holtz
+* Three.meshline - Copyright (c) Vasco Asturiano

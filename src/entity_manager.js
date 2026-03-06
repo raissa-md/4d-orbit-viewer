@@ -36,7 +36,6 @@ import { TIME_RATE } from './constants.js'
 import { MAX_MESHLINE_PTS } from './constants.js'
 import { PLANET_ORBIT_INTERVAL } from './constants.js'
 //import { PlaySquareOutlined } from '@ant-design/icons';
-//import { nonWhiteSpace } from 'html2canvas/dist/types/css/syntax/parser.js';
 
 import { SSC_WS } from './ssc_ws.js'
 import { JN } from './ssc_ws.js'
@@ -306,6 +305,7 @@ export class entity
         return GSE_to_WS (GSE_to_Frame (gse, t, frame))
         }
 
+    /* No longer used.
     set_frame (frame = REF_FRAME.ECI)
         {
         if  (this._orbit_ref_frame !== frame)
@@ -320,6 +320,7 @@ export class entity
                 }
             }
         }
+    */
 
     set_coord_system (system = COORD_System.GSE)
         {
@@ -1665,6 +1666,7 @@ class spacecraft extends entity
         return true 
         }
 
+    /* No longer used.
     set_frame (frame = REF_FRAME.ECI)
         {
         if  (this._orbit_ref_frame !== frame)
@@ -1684,6 +1686,7 @@ class spacecraft extends entity
             super.set_frame (frame)
             }
         }
+    */
 
     set_coord_system (system = COORD_System.GSE)
         {
@@ -2020,6 +2023,7 @@ export class entity_manager
             }
         }
 
+    /* No longer used.
     set_reference_frame (frame = REF_FRAME.ECI)
         {
         if  (this._reference_frame !== frame)
@@ -2029,6 +2033,7 @@ export class entity_manager
             this._reference_frame = frame
             }
         }
+    */
 
     async update_actor (actor)
         {
