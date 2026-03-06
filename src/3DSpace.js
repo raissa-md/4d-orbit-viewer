@@ -1640,6 +1640,7 @@ class display_space
         this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
         }
 
+    /* No longer used
     set_reference_frame (...args)
         {
         this.entity_manager.set_reference_frame (...args)
@@ -1651,6 +1652,7 @@ class display_space
         // alert (this.entity_manager.time)
         this.update_grids ()
         }
+    */
 
     set_ambient_light (val = true)
         {

@@ -61,9 +61,6 @@ import { V3DSpace } from './App.jsx'
 import Ghost_Menu from './ghost_selection.jsx'
 import { SELECT_TYPE } from './ghost_selection.jsx'
 
-//import { display } from 'html2canvas/dist/types/css/property-descriptors/display.js';
-
-
 function use_min_width (disp_width)
     {
     return (disp_width < MIN_DIALOG_WIDTH * DIALOG_SPACE_FACTOR)? true : false
@@ -1704,19 +1701,21 @@ class Coordinate_System_Select extends React.Component
 
         this.state = {
            req_coord_system: this.props.system,
-           ref_frame: this.props.current_ref_frame 
+           // ref_frame: this.props.current_ref_frame 
            } ;
 
         this.local_update = this.local_update.bind (this)
-        this.select_rotating_ref_frame = this.select_rotating_ref_frame.bind (this)
+        // this.select_rotating_ref_frame = this.select_rotating_ref_frame.bind (this)
         }
 
+    /*
     select_rotating_ref_frame (e)
         {
         this.setState ({ref_frame: e.target.checked})
 
         this.props.update_ref_frame (e)
         }
+    */
 
     local_update (name, index, checked)
         {
@@ -2894,8 +2893,8 @@ class Base_Layout extends React.Component
             <Coordinate_System_Select
                 update={this.update_coord_system}
                 system={V3DSpace.coord_system}
-                current_ref_frame={V3DSpace.reference_frame === REF_FRAME.ECER}
-                update_ref_frame={this.update_reference_frame}
+                // current_ref_frame={V3DSpace.reference_frame === REF_FRAME.ECER}
+                // update_ref_frame={this.update_reference_frame}
                 /> ;
         
         
@@ -3014,6 +3013,8 @@ class Base_Layout extends React.Component
         this.props.update_coord_system ()
         }
 
+
+    /* Not needed anymore.
     update_reference_frame (e)
         {
         if  (e.target.checked)
@@ -3026,6 +3027,7 @@ class Base_Layout extends React.Component
             V3DSpace.set_reference_frame (REF_FRAME.ECI)
             }
         }
+    */
 
     save_selected_orbits ()
         {
