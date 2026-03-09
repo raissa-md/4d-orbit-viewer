@@ -36,6 +36,7 @@ import { TIME_RATE } from './constants.js'
 import { MAX_MESHLINE_PTS } from './constants.js'
 import { PLANET_ORBIT_INTERVAL } from './constants.js'
 //import { PlaySquareOutlined } from '@ant-design/icons';
+import { PLANETS } from './planet_data.js'
 
 import { SSC_WS } from './ssc_ws.js'
 import { JN } from './ssc_ws.js'
@@ -57,6 +58,11 @@ export const ENT_type = Object.freeze (entity_types)
 // Reasonable case that this should be a static class which is passed to 
 // the entity_manager.
 export const system_time = {time: 0} 
+
+
+const PLANET_POSITION = PLANETS.map ((planet, index) => {
+    return {id: planet.id, index: index, name: planet.name, x:0, y:0, z:0}
+    })
 
 // Text color selection functions
 function hex_to_rgb (hex)
@@ -200,6 +206,8 @@ function min_allowed_res (t0, t1, cadence = 60)
     return Math.max (1, min_res)
     }
 
+
+
 export class entity 
     {
     constructor (...args)
@@ -286,6 +294,11 @@ export class entity
     V3_from_orbit (pos = 0)
         {
         return new THREE.Vector3 (this._orbit [pos].x, this._orbit [pos].y, this._orbit [pos].z)
+        }
+
+    orbit_to_frame (gse, t, center)
+        {
+        return {x: gse.x - center.x, y: gse.y - center.y, z: gse.z - center.z}
         }
 
     orbit_to_DS (index, system = this._coord_system)
