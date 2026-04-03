@@ -81,7 +81,7 @@ class Ghost_SC_Selection extends React.Component
         const call_if_active = () => {
             if  (record.display) 
                 {
-                this.props.set_focus (record.id)
+                V3DSpace.set_focus (record.id)
                 }
             } ;
 
@@ -1265,7 +1265,6 @@ class Ghost_Single_Panel extends React.Component
                         selected={this.props.selected}
                         get_new_color={this.props.get_new_color}
                         get_new_shape={this.props.get_new_shape}
-                        set_focus={this.props.set_focus}
                         handle_change={this.props.handle_change}
                         sats={this.props.sats}
                         close_action={this.props.close_action}
@@ -1413,7 +1412,6 @@ class Ghost_Full_Screen extends React.Component
                         selected={this.props.selected}
                         get_new_color={this.props.get_new_color}
                         get_new_shape={this.props.get_new_shape}
-                        set_focus={this.props.set_focus}
                         handle_change={this.props.handle_change}
                         sats={this.props.sats}
                         close_action={this.props.close_action}
@@ -1630,7 +1628,6 @@ class Ghost_Menu extends React.Component
                 selected={this.state.selected}
                 get_new_color={this.props.get_new_color}
                 get_new_shape={this.props.get_new_shape}
-                set_focus={this.props.set_focus}
                 handle_change={this.handle_change}
                 sats={this.props.sats}
                 close_action={this.close_action}
@@ -1659,7 +1656,6 @@ class Ghost_Menu extends React.Component
                 selected={this.state.selected}
                 get_new_color={this.props.get_new_color}
                 get_new_shape={this.props.get_new_shape}
-                set_focus={this.props.set_focus}
                 handle_change={this.handle_change}
                 sats={this.props.sats}
                 close_action={this.close_action}

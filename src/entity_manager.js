@@ -24,7 +24,7 @@ import { GSE_to_WS } from './Orbit.js'
 import { Frame_to_DS } from './Orbit.js'
 import { GSE_to_Frame } from './Orbit.js'
 import { xyz } from './Orbit.js'
-import { Calculate_Planet_Orbit } from './Orbit.js'
+// import { Calculate_Planet_Orbit } from './Orbit.js'
 //import { EARTH_RADIUS } from './Orbit.js'
 import { COORD_Unit } from './Orbit.js'
 import { convert } from './Orbit.js'
@@ -36,9 +36,11 @@ import { TIME_RATE } from './constants.js'
 import { MAX_MESHLINE_PTS } from './constants.js'
 import { PLANET_ORBIT_INTERVAL } from './constants.js'
 //import { PlaySquareOutlined } from '@ant-design/icons';
+import { PLANETS } from './planet_data.js'
 
 import { SSC_WS } from './ssc_ws.js'
 import { JN } from './ssc_ws.js'
+import { Orbit_Data } from './App.jsx'
 
 const DEF_SC_COLOR = "#FFFF00" ;
 const DEF_SC_SHAPE = "sphere" ;
@@ -57,6 +59,10 @@ export const ENT_type = Object.freeze (entity_types)
 // Reasonable case that this should be a static class which is passed to 
 // the entity_manager.
 export const system_time = {time: 0} 
+
+const PLANET_POSITION = PLANETS.map ((planet, index) => {
+    return {id: planet.id, index: index, name: planet.name, x:0, y:0, z:0}
+    }) ;
 
 // Text color selection functions
 function hex_to_rgb (hex)
@@ -200,6 +206,8 @@ function min_allowed_res (t0, t1, cadence = 60)
     return Math.max (1, min_res)
     }
 
+
+
 export class entity 
     {
     constructor (...args)
@@ -233,7 +241,7 @@ export class entity
             args [1] && (this._name = args [1]) 
             }
 
-        this._exist = false 
+        this._exist = false // Set to true after the 3D object has been created.
         this._x_disp = 0
         this._y_disp = 0
 
@@ -246,11 +254,12 @@ export class entity
         this._orbit = []
         this._time = []
         this._decimate = [] // indexes required for simplified version of the orbit
-        this._orbit_ref_frame = REF_FRAME.ECI
+        // this._orbit_ref_frame = REF_FRAME.ECI
         this._coord_system = COORD_System.GEI
+        this._coord_center = null
 
-        this._at_start = false // True when entity at the start of its orbit
-        this._at_end   = false // True when entity at the end of its orbit
+        // this._at_start = false // True when entity at the start of its orbit
+        // this._at_end   = false // True when entity at the end of its orbit
         this._index  = 0       // Index of closest orbital position triplet
         this._tstart = 0       // Beginning of currently requested orbit data
         this._tend = 0         // End of currently requested orbit data
@@ -283,18 +292,40 @@ export class entity
         console.log ('Setting time to: ', time)
         }
 
-    V3_from_orbit (pos = 0)
+    V3_from_orbit (index = 0)
         {
-        return new THREE.Vector3 (this._orbit [pos].x, this._orbit [pos].y, this._orbit [pos].z)
+        // return new THREE.Vector3 (this._orbit [pos].x, this._orbit [pos].y, this._orbit [pos].z)
+        const {x, y, z} = Orbit_Data.get_pos (this._id, index)
+
+        return new THREE.Vector3 (x, y, z)
         }
 
-    orbit_to_DS (index, system = this._coord_system)
-        {
-        const gse = xyz (this._orbit [index])
-        const t = this._time [index]
-    
 
-        return Frame_to_DS (GSE_to_ANY (gse, system, t))
+    // This probably should be a method of Orbit_Data
+    // This requires an array of coordinates in GSE [x, y, z]
+    // This is no longer necessary. 
+    orbit_to_frame (gse, time = this._now, center = this._coord_center)
+        {
+        // Make sure the data for the coordinate center planet is available.
+        // If it's not, just return the the original coordinates unchanged.
+        if  (center === null || ! Orbit_Data.orbit_data_valid (center))
+            {
+            return gse
+            }
+
+        // center should be set to the object ID of the planet that will serve as
+        // reference center of the orbit visualization. If it is set, then the position of the planet 
+        // at time t will be subtracted from the position of the spacecraft to get the position
+        // of the spacecraft relative to the planet.  
+        const center_pos = Orbit_Data.get_orbit_pos (center, time, true)
+
+        const r = [0, 0, 0]
+                    
+        r [0] = gse [0] - center_pos.x
+        r [1] = gse [1] - center_pos.y
+        r [2] = gse [2] - center_pos.z
+
+        return r
         }
 
     /* No longer used.
@@ -324,14 +355,14 @@ export class entity
         }
     */
 
-    set_coord_system (system = COORD_System.GSE)
+    set_coord_center (center = null)
         {
-        if  (this._coord_system !== system)
+        if  (this._coord_center !== center)
             {
-            this._coord_system = system
+            this._coord_center = center
 
             // If the object hasn't been instanced yet, then don't do anything.
-            if  (this._time.length > 0)
+            if  (Orbit_Data.orbit_data_valid (this._id))
                 {
                 // Update spacecraft position to current time 
                 this.update_position (this._now)
@@ -339,53 +370,114 @@ export class entity
             }
         }
 
-    // Maybe worth having this just return a position value instead of updating the 
-    // the object position. Maybe?
-    update_position (time, use_interpolation=false, system = this._coord_system)
+
+    set_coord_system (system = COORD_System.GSE)
+        {
+        if  (this._coord_system !== system)
+            {
+            this._coord_system = system
+
+            // If the object hasn't been instanced yet, then don't do anything.
+            if  (Orbit_Data.orbit_data_valid (this._id))
+                {
+                // Update spacecraft position to current time 
+                this.update_position (this._now)
+                }
+            }
+        }
+
+    // Should no longer need orbit_to_frame.
+    pos_to_DS (pos, time, system = this._coord_system) 
+        {
+        // pos is an object with x, y, z properties {x: , y: , z: }
+
+        // const gse = this.orbit_to_frame (pos, time)  
+
+        const r = Frame_to_DS (GSE_to_ANY (pos, system, time))
+
+        return r
+        }
+
+    // Currently only used for creating the beginning of track marker.
+    index_to_DS (index, center = this._coord_center, system = this._coord_system)
+        {
+        // Get the position of the spacecraft at the specified index in the orbit data, 
+        // relative to the specified center, and convert it to the specified coordinate system.
+        const pos = Orbit_Data.get_pos (this._id, index, center)
+        const time = Orbit_Data.get_time (this._id, index)
+
+        return this.pos_to_DS (pos, time, system)
+        }
+
+    calc_position (time, use_interpolation=false, center = this._coord_center)
     // update_position (time, use_interpolation=false, frame = this._orbit_ref_frame)
         {
         //use_interpolation = false
-        if  (this._time.length === 0)
+        // Not sure what to return on invalid data.
+        if  (! this.data_valid ())
             {
-            return
+            return null
             }
 
         this._now = time
 
-        this._at_start = false
-        this._at_end = false
+        // I don't think I need these flags anymore.
+        // this._at_start = false
+        // this._at_end = false
 
-        let f_interpolate = use_interpolation // interpolation flag.
+        let f_interpolate = use_interpolation // interpolation flag. Why is this needed?
 
-        let p_0  = 0
-        let p_1  = 0
+        //let p_0  = 0
+        //let p_1  = 0
 
-        let t0 = 0
-        let t1 = 0
+        //let t0 = 0
+        //let t1 = 0
+
+        // const pos = new THREE.Vector3 () // position vector to be returned (updated flow)
+        let pos = {x: 0, y: 0, z: 0} // position object to be returned (new flow)
 
         // Find the index of the orbit position whose time is closest to the current
         // time.
 
         // time prior to the earliest orbital point
-        if  (time <= this._time [0])                  
+        if  (Orbit_Data.before_time_range (this._id, time))                  
             {
             this._index = 0 
-            this._now = this._time [this._index]
+            this._now = Orbit_Data.get_time (this._id, this._index)
             f_interpolate = false 
 
-            this._at_start = true
+            //this._at_start = true
             }
 
         // time after latest orbital point.
-        else if (time >= this._time [this._time.length-1])  
+        else if (Orbit_Data.after_time_range (this._id, time))  
             {
-            this._index  = this._time.length-1 
-            this._now = this._time [this._index]
+            this._index  = Orbit_Data.get_length (this._id) - 1
+            this._now = Orbit_Data.get_time (this._id, this._index)
             f_interpolate = false 
             
-            this._at_end = true
+            //this._at_end = true
             }
 
+        // time_to_index returns a floating-point index representing the interpolated 
+        // position in the orbit data
+        const index = Orbit_Data.time_to_index (this._id, this._now, f_interpolate)
+
+        this._index = Math.floor (index)
+        
+        
+        // Calculate position at time using interpolation or nearest neighbor.
+        if  (! f_interpolate)
+            {
+            pos  = Orbit_Data.get_pos (this._id, this._index, center)
+            }
+
+        else
+            {
+            pos  = Orbit_Data.get_relative_pos (this._id, this._now, center, f_interpolate)
+            }
+
+        /* Old version of orbit position calculation.
         // time within range covered by orbital data.  Calculate!
         else                                   
             {
@@ -410,6 +502,7 @@ export class entity
             this._at_end = (this._index === this._time.length - 1) ? true : false 
             this._at_start = (this._index === 0)? true : false
             }
+
         if  (f_interpolate)
             {
             // The interval between closest and p1 should bracket the position of the s/c at time.
@@ -419,16 +512,24 @@ export class entity
             // const v0 = GSE_to_WS (GSE_to_Frame (this.V3_from_orbit (p_0)), t0, this._orbit_ref_frame)
             
             //const v0 = new THREE.Vector3().fromArray (this.orbit_to_WS (p_0, frame))
-            const v0 = new THREE.Vector3().fromArray (this.orbit_to_DS (p_0, system))
+            //const v0 = new THREE.Vector3().fromArray (this.orbit_to_DS (p_0, system))
+
+            // Set pos to object postion at t0. 
+            // This is position that will be returned and also be used for interpolation.
+            pos.fromArray (xyz (this._orbit [p_0]))
             
             // const v1 = new THREE.Vector3().fromArray (this._points, p_1 * 3) 
             // const v1 = GSE_to_WS (this.V3_from_orbit (p_1))
             // const v1 = GSE_to_WS (GSE_to_Frame (this.V3_from_orbit (p_1)), t1, this._orbit_ref_frame)
             
             //const v1 = new THREE.Vector3().fromArray (this.orbit_to_WS (p_1, frame))
-            const v1 = new THREE.Vector3().fromArray (this.orbit_to_DS (p_1, system))
+            //const v1 = new THREE.Vector3().fromArray (this.orbit_to_DS (p_1, system))
 
-            this._obj.position.lerpVectors (v0, v1, alpha) 
+            // Interpolate between the two positions at t0 and t1 to get the position at
+            // the requested time.
+            pos.lerp (new THREE.Vector3 ().fromArray (xyz (this._orbit [p_1])), alpha)
+
+            //this._obj.position.lerpVectors (v0, v1, alpha) 
             }
 
         else
@@ -437,11 +538,15 @@ export class entity
             // this._obj.position.fromArray (GSE_to_WS (xyz (this._orbit [this._index])))
             
             //this._obj.position.fromArray (this.orbit_to_WS (this._index, frame))
-            this._obj.position.fromArray (this.orbit_to_DS (this._index, system))
+            //this._obj.position.fromArray (this.orbit_to_DS (this._index, system))
             
             //this._obj.position.set (this._orbit [this._index].x, 
             //                        this._orbit [this._index].y, 
             //                        this._orbit [this._index].z)
+
+            // Set pos to object postion at t0. 
+            pos.fromArray (xyz (this._orbit [this._index]))
+ 
             }
 
         if  (this._id === 'MOON')
@@ -450,7 +555,34 @@ export class entity
             }
  
         // Return the current orbit time for use by the planetary rotation method
-        return this._now
+        // return this._now
+    `  */
+
+        // Return the current position vector in GSE coordinates.
+        return pos
+        }
+
+    update_position (time, use_interpolation=false, center = this._coord_center, system = this._coord_system)
+        {
+        const pos = this.calc_position (time, use_interpolation, center)
+
+        // console.log ("Updating position for ", this._id, " at time ", time, " to ", pos)
+
+        // NB. calc_position may reset this._now to the end or beginning of the orbit data.
+        // NB. pos_to_DS returns the position in {x: , y: , z: } format.
+        const gse = this.pos_to_DS (pos, this._now)
+
+        this._obj.position.fromArray (xyz (gse))
+        /*
+        const test = new THREE.Vector3 ()    
+        
+        test.fromArray (this.pos_to_DS (pos, time, system))
+
+        if  (test.distanceToSquared (this._obj.position) > 1e-6)
+            {
+            console.log ("Positions do not match: ", test.toArray (), this._obj.position.toArray ())
+            }
+        */
         }
 
     /*
@@ -462,12 +594,12 @@ export class entity
 
     start_time ()
         {
-        return (this._time.length > 1)? this._time [0] : 0
+        return (Orbit_Data.orbit_data_valid (this._id))? Orbit_Data.get_time (this._id, 0) : 0
         }
 
     stop_time ()
         {
-        return (this._time.length > 1)? this._time [this._time.length - 1] : 0
+        return (Orbit_Data.orbit_data_valid (this._id))? Orbit_Data.get_time (this._id, Orbit_Data.get_length (this._id) - 1) : 0
         }
 
     // I am not sure that this will ever be used.
@@ -513,9 +645,10 @@ export class entity
             }
         }
 
+    // I should probably use this instead of accessing Orbit_Data directly.
     data_valid ()
         {
-        return (this._time.length > 0)
+        return Orbit_Data.orbit_data_valid (this._id)
         }
 
     /*
@@ -628,6 +761,9 @@ export class entity
         return this.pass_two (orbit, r, threshold)
         }
     */
+
+    /* Shouldn't need this any more.
+     * Functionality is now in orbit_data.js
     decimate ()
         {
         const MAX_POINTS = 4000
@@ -652,7 +788,10 @@ export class entity
 
         console.log ("decimated to", this._decimate.length)
         }
+    */
 
+    // Not used currently.
+    /*
     simplify_curve (orbit)
         {
         const r = []
@@ -664,7 +803,10 @@ export class entity
 
         return r
         }
+    */
 
+    // Not used currently.
+    /*
     simplify_time (time)
         {
         const t = []
@@ -677,13 +819,17 @@ export class entity
         return t
 
         }
+    */
 
+    /* Not used currently.
     // Returns an array of orbit coordinates in the same format that is required
     // For meshline.  
     // Why is this even here?
     //  Should just use get_orbit_as_array
     get_orbit_coord (system = COORD_System.GSE)
         {
+        
+
         let r = [] 
 
         const repack = (e, i) => {
@@ -694,7 +840,9 @@ export class entity
 
         return r
         }
+    */  
 
+    /* No longer used.
     orbit_as_single_array ()
         {
         let r = []
@@ -706,22 +854,27 @@ export class entity
 
         return r
         }
+    */
 
-
+    /* No longer used.
     get_orbit_times ()
         {
         return [...this._time]
         }
+    */
 
     clear_orbit_data ()
         {
-        this._time.length = 0
-        this._orbit.length = 0
+        //this._time.length = 0
+        //this._orbit.length = 0
 
+        Orbit_Data.delete_orbit (this._id)
+
+        // Some of this may be moved to Orbit_Data in the future
         this._now = 0
         this._index  = 0
-        this._at_start = false
-        this._at_end   = false
+        // this._at_start = false
+        // this._at_end   = false
         }
 
     get_orbit_pos (system = COORD_System.GSE, index = this._index)
@@ -735,12 +888,12 @@ export class entity
             valid: false,
             }
 
-        if  (this._time.length > 0)
+        if  (this.data_valid ())
             {
             // This could probably be rewritten to be more efficient?
-            r.time = this._time [index]
+            r.time = Orbit_Data.get_time (this._id, index)
 
-            const {x, y, z} = GSE_to_ANY (this._orbit [index], system, r.time)
+            const {x, y, z} = GSE_to_ANY (Orbit_Data.get_pos (this._id, index), system, r.time)
             //const {x, y, z} = GSE_to_ANY ({x:81.38, y:-29.62, z:-50}, system, r.time)
             // const {x, y, z} = ANY_to_GSE ({x:100.0, y:100, z:100}, system, r.time)
             // const {x, y, z} = ANY_to_GSE (ρϕλ_2_xyz (100., -30.*DEG2RD, -20.*DEG2RD), system, r.time)
@@ -922,7 +1075,9 @@ class planet extends entity
         //    coord: [],
         //   points: [],
         //    }
-        this.orbit_calc = new Calculate_Planet_Orbit ()
+        console.log ("Creating planet with id = ", this._id)
+        // Not needed
+        // this.orbit_calc = new Calculate_Planet_Orbit ()
         }
 
     available ()
@@ -955,31 +1110,28 @@ class planet extends entity
 
     // Will eventually need to change this as well
     
-    get_orbit_data (t0, t1)
+    async get_orbit_data (t0, t1)
         {
         this.clear_orbit_data ()
 
+        // This is a glitchy way to generate pseudo orbit data for earth.  Since Earth doesn't
+        // actually move (always at 0,0,0 GSE) it doesn't get an orbit data request.  But orbit
+        // data for it may still be required (somewhere).  There is probably a better way to do
+        // this (if it even needs to be done at all).
         if  (this._ssc_id === "")
             {
             return new Promise ((resolve) => 
                 {
-                let utc = t0
-
-                while (utc <= t1)
-                    {
-                    this._time.push (utc)
-                    this._orbit.push ({x: 0., y: 0., z: 0.})
-            
-                    utc += PLANET_ORBIT_INTERVAL * 60 * 1000    
-                    }
-            
+                Orbit_Data.create_orbit_data (this._id, t0, t1, PLANET_ORBIT_INTERVAL * 60 * 1000)
+                    
                 resolve ()
                 });
             }
 
         console.log ("planet = ", this._ssc_id)
-        return SSC_WS.get_orbit_data (this._ssc_id, t0, t1, 12, 'GSE', COORD_Unit.RE)
+        return SSC_WS.get_orbit_data (this._ssc_id, t0, t1, 12, 'GSE', COORD_Unit.RE, this._id)
 
+        /* Orbit data is now stored in the Orbit_Data module.
             .then ( (data) =>
                 {
                 this._time = data.time
@@ -987,6 +1139,7 @@ class planet extends entity
 
                 this.decimate ()
                 }) ;
+        */
 
         /*
         return this.orbit_calc.calculate_orbit_data (this._id, t0, t1)
@@ -999,35 +1152,38 @@ class planet extends entity
         */
         }
 
-        /*
-        get_orbit_data (t0, t1)
-            {
-            this.clear_orbit_data ()
+    /*
+    get_orbit_data (t0, t1)
+        {
+        this.clear_orbit_data ()
 
-            return SSC_WS.get_orbit_data (this._id, t0, t1, 2, 'GSE', COORD_Unit.RE)
+        return SSC_WS.get_orbit_data (this._id, t0, t1, 2, 'GSE', COORD_Unit.RE)
 
-                .then ( (data) =>
-                    {
-                    this._time = data.time
-                    this._orbit = data.coord
+            .then ( (data) =>
+                {
+                this._time = data.time
+                this._orbit = data.coord
 
-                    this.decimate ()
-                    }) ;
-            }
-        */
+                this.decimate ()
+                }) ;
+        }
+    */
 
     update_position (time)
         {
-        if  (this._time.length === 0)
+        if  (! this.data_valid ())
             {
+            console.warn ("Orbit data not valid for ", this._id)
+
             return
             }
-        
-        this.rotate (super.update_position (time, true))
+            
+        super.update_position (time, true)
+
+        this.rotate (this._now)
         }
 
-
-    deploy (t0, t1)
+    async deploy (t0, t1)
         {
         if  (! this._scene || ! this._scene.isScene)
             {
@@ -1371,7 +1527,7 @@ class spacecraft extends entity
 
     update_position (time)
         {
-        if  (this._time.length === 0)
+        if  (! this.data_valid ())
             {
             return
             }
@@ -1399,16 +1555,18 @@ class spacecraft extends entity
     */
 
     // orient_spacecraft (frame = this._orbit_ref_frame)
-    orient_spacecraft (system = this._coord_system)
+    orient_spacecraft (center = this._coord_center, system = this._coord_system)
         {
         // Point shape in direction of orbit, but only if it is not a sphere.
-        if  (this._shape !== "sphere" && ! this._at_end) 
+        if  (this._shape !== "sphere" && ! Orbit_Data.is_last_index (this._id, this._index)) 
             {    
             //const target = new THREE.Vector3 ().fromArray (this._points, (this._index + 1) * 3) ;
             //const target = new THREE.Vector3 ().fromArray (xyz (GSE_to_WS (this._orbit [this._index])))
             //const target = new THREE.Vector3 ().fromArray (this.orbit_to_WS (this._index + 1, frame))
-            const target = new THREE.Vector3 ().fromArray (this.orbit_to_DS (this._index + 1, system))
-
+            //const target = new THREE.Vector3 ().fromArray (this.orbit_to_DS (this._index + 1, system))
+            const target = new THREE.Vector3 ()
+            
+            target.fromArray (xyz (this.index_to_DS (this._index + 1, center, system))) 
 
             target.sub (this._obj.position) ;
             target.normalize () ;
@@ -1428,14 +1586,15 @@ class spacecraft extends entity
        console.log ("id %s res %s min %s orbit %s", this._id, res, min_res, this._orbit_class)
 
        return SSC_WS.get_orbit_data (this._id, t0, t1, Math.min (res, min_res), 'GSE', COORD_Unit.RE)
-
-           .then ( (data) =>
+            /*
+           .then ( (r) =>
                {
-               this._time = data.time
+               this._time = Orbit_Data.Get_Orbit_Time (this._id)
                this._orbit = data.coord
 
                this.decimate ()
                }) ;
+            */
        }
    
 
@@ -1464,6 +1623,7 @@ class spacecraft extends entity
             this.dispose_orbit (true)
 
             this.create_orbit ()
+
             this.create_direction_indicator ()
 
             // Update spacecraft position to current time 
@@ -1474,17 +1634,29 @@ class spacecraft extends entity
         }
 
     // create_orbit (frame = this._orbit_ref_frame)
-    create_orbit (system = this._coord_system)
+    create_orbit (center = this._coord_center, system = this._coord_system)
         {
         // Probably best not to do this until a better decimation routine is developed
         // const orbit = this.simplify_curve (this.orbit_as_single_array (true))
         // const time  = this.simplify_time (this._time)
 
-        const orbit = this.orbit_as_single_array (true)
-        const time  = this._time
+        // Replace with orbit data from Orbit_Data module.
+        // NB. We have to decimate here to avoid exceeding MeshLine limits.
+        // const orbit = this.orbit_as_single_array (true)
+        // const time  = this._time
 
-        console.log ("Total number of time points: " + time.length)
-        //console.log ("Total number of orbit points: " + orbit.length)
+        const orbit = Orbit_Data.orbit_to_array (
+            Orbit_Data.decimate (
+                Orbit_Data.get_relative_orbit_data (
+                    this._id, 
+                    center
+                    ))) 
+
+        const time  = Orbit_Data.decimate (Orbit_Data.get_time_vector (this._id))
+
+        // Probably should add a verbose mode for extra logging like this.
+        // console.log ("Total number of time points after decimation: " + time.length)
+        // console.log ("Total number of orbit points after decimation: " + orbit.length)
 
         let pts = time.length
         let instance = 0
@@ -1504,13 +1676,14 @@ class spacecraft extends entity
             const time_slice = time.slice (start, stop)
             const orbit_slice = orbit.slice (start * 3, stop * 3)
 
+
             // console.log ("slice parameters: ", start, stop, start * 3, stop * 3)
 
             // Add in the geometry for the line
             // line.setPoints (GSE_to_WS (GSE_to_Frame (this.orbit_as_single_array (true), this._time, frame)))
             //line.setPoints (Frame_to_DS (GSE_to_ANY (this.orbit_as_single_array (true), system, this._time)))
             // line.setPoints (Frame_to_DS (GSE_to_ANY (this.orbit_as_single_array (true), system, this._time)))
-            line.setPoints (Frame_to_DS (GSE_to_ANY (orbit_slice, system, time_slice)))
+            line.setPoints (Frame_to_DS (GSE_to_ANY (orbit_slice, system, time_slice))) // need to update this?
 
             // Create the line material                   
             const material = new MeshLineMaterial (
@@ -1537,24 +1710,24 @@ class spacecraft extends entity
             }
         }
 
-    create_direction_indicator (system = this._coord_system)
+    create_direction_indicator (center = this._coord_center, system = this._coord_system)
     // create_direction_indicator (frame = REF_FRAME.ECI)
         {
         const cone = new THREE.ConeGeometry (0.04, .10, 16)
 
         this._direct = new THREE.Mesh (cone, this._common_direct_material) 
 
-        //this._direct.position.fromArray (this._points, 0)
+        // this._direct.position.fromArray (this._points, 0)
         // this._direct.position.fromArray (xyz (GSE_to_WS (this._orbit [0])))
-        //this._direct.position.fromArray (this.orbit_to_WS (0, frame))
-        this._direct.position.fromArray (this.orbit_to_DS (0, system))
-        
+        // this._direct.position.fromArray (this.orbit_to_WS (0, frame))
+        // this._direct.position.fromArray (this.orbit_to_DS (0, system))
+        this._direct.position.fromArray (xyz (this.index_to_DS (0, center, system)))
         
         //const target = new THREE.Vector3 ().fromArray (this._points, 3)
         //const target = new THREE.Vector3 ().fromArray (xyz (GSE_to_WS (this._orbit [1])))
         //const target = new THREE.Vector3 ().fromArray (this.orbit_to_WS (1, frame))
-        const target = new THREE.Vector3 ().fromArray (this.orbit_to_DS (1, system))
-
+        //const target = new THREE.Vector3 ().fromArray (this.orbit_to_DS (1, system))
+        const target = new THREE.Vector3 ().fromArray (xyz (this.index_to_DS (1, center, system)))
 
         target.sub (this._direct.position)
         target.normalize ()
@@ -1690,25 +1863,40 @@ class spacecraft extends entity
         }
     */
 
+    recreate_orbit (center = this._coord_center, system = this._coord_system)
+        {
+        // Recreate the orbit and orbit indicator  
+        if  (this.data_valid ())
+            {
+            // Remove the orbit and orbit indicator
+            this.dispose_orbit (true)
+
+            // Create the new orbit
+            this.create_orbit (center, system)
+
+            this.create_direction_indicator (center, system)    
+
+            this.update_position (this._now)
+            }
+        }   
+
+    set_coord_center (center = null)
+        {
+        if  (this._coord_center !== center)
+            {
+            this._coord_center = center
+
+            this.recreate_orbit ()
+            }
+        }
+
     set_coord_system (system = COORD_System.GSE)
         {
         if  (this._coord_system !== system)
             {
             this._coord_system = system
 
-            // Recreate the orbit and orbit indicator
-            if  (this._time.length !== 0)
-                {
-                // Remove the orbit and orbit indicator
-                this.dispose_orbit (true)
-
-                // Create the new orbit
-                this.create_orbit (system)
-
-                this.create_direction_indicator (system)    
-
-                this.update_position (this._now)
-                }
+            this.recreate_orbit (system)            
             }
         }
 
@@ -1723,7 +1911,6 @@ class spacecraft extends entity
         {
         // If all is true, dispose of the orbit and the orbit direction indicator
         // If all is false, only dispose of the orbit.
-        console.log ('removing orbit for ', this._id)
         if  (this._orbit_path.length > 0)
             {
             for (let i = 0 ; i < this._orbit_path.length ; i++)
@@ -1789,8 +1976,8 @@ export class entity_manager
         // Time value that matches current orbital position
         // Moved to the Module Level system_time object
         // this._time = 0
-        this._at_start = true
-        this._at_end = false
+        // this._at_start = true
+        // this._at_end = false
 
         // Show or hide labels for a class of objects as a group
         this._show_labels_sc = true
@@ -1799,6 +1986,7 @@ export class entity_manager
 
         //this._planet_orbit =
         this._coord_system = COORD_System.GSE
+        this._coord_center = null
         this._reference_frame = REF_FRAME.ECI
         this._unit = COORD_Unit.RE
         // this._reference_frame = REF_FRAME.ECER
@@ -1816,6 +2004,7 @@ export class entity_manager
         actor.set_time (system_time.time)
         //actor.set_frame (this._reference_frame)
         actor.set_coord_system (this._coord_system)
+        actor.set_coord_center (this._coord_center)
 
         this.list.set (actor.id, actor)
 
@@ -1881,6 +2070,10 @@ export class entity_manager
             {
             return  this.list.get (id)
             }
+
+        console.log ("Attempted to access invalid asset in store")
+        console.log ("Requested id: ", id)
+        console.trace ()
 
         alert ("Attempted to access invalid asset in store")
 
@@ -1997,6 +2190,19 @@ export class entity_manager
             }
         }
 
+    set_coord_center (center = null)
+        {
+        if  (this._coord_center !== center)
+            {
+            console.log ("Setting coordinate center to: ", center)
+
+            this.list.forEach (actor => actor.set_coord_center (center))
+
+            this._coord_center = center
+            }
+        }
+
+
     set_coord_system (system = COORD_System.GSE)
         {       
         if  (this._coord_system !== system)
@@ -2092,7 +2298,7 @@ export class entity_manager
             case (this.time_range_update):
 
                 this.set_time (0)
-                new Calculate_Planet_Orbit ().reset ()  //Singleton Class
+                // new Calculate_Planet_Orbit ().reset ()  //Singleton Class
 
                 // falls through
 
@@ -2113,21 +2319,21 @@ export class entity_manager
 
     set_time (t)
         {
-        this._at_start = false
-        this._at_end = false
+        //this._at_start = false
+        //this._at_end = false
 
         system_time.time = t
 
         if  (t <= this._start_time)
             {
             system_time.time = this._start_time
-            this._at_start = true
+            // this._at_start = true
             }
 
         else if  (t  >= this._end_time)
             {
             system_time.time = this._end_time
-            this._at_end = true
+            //this._at_end = true
             }        
 
         this.list.forEach (actor => actor.update_position (system_time.time))
@@ -2139,8 +2345,8 @@ export class entity_manager
         {
         let pause = false
 
-        this._at_start = false
-        this._at_end = false
+        //this._at_start = false
+        //this._at_end = false
 
        system_time.time += delta * TIME_RATE
 
@@ -2149,13 +2355,13 @@ export class entity_manager
             if  (loop)
                 {
                 system_time.time = this._start_time
-                this._at_start = true
+                // this._at_start = true
                 }
 
             else 
                 {
                 system_time.time = this._end_time
-                this._at_end = true
+                // this._at_end = true
 
                 pause = true
                 }
@@ -2294,15 +2500,19 @@ export class entity_manager
         return d
         }
 
+    /* No longer used.
     get_orbit_coord (id, system = this._coord_system)
         {
         return this.get (id).get_orbit_coord (system)
         }
+    */
 
+    /* No longer used.
     get_orbit_times (id)
         {
         return this.get (id).get_orbit_times ()
         }
+    */
 
     add_GS_to_planet (planet, gs_loc = [])
         {

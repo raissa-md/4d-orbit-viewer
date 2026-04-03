@@ -1,7 +1,7 @@
 export const TITLE = "4D Orbit Viewer"
 export const CODE_SORCERESS = "Raissa Woodland"
-export const BUILD = "0-2026.03.02.1118"
-export const BUILD_DATE = "March 2, 2026"
+export const BUILD = "0-2026.04.03.1352"
+export const BUILD_DATE = "April 3, 2026"
 
 // Use npm run build to build
 

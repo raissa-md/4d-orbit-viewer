@@ -30,7 +30,7 @@ class Target_Bar extends React.Component
 
     set_frame_moon ()
         {
-        this.props.set_focus ("MOON")
+        this.props.set_frame ("MOON")
         }
 
     set_frame_sun ()
@@ -40,16 +40,16 @@ class Target_Bar extends React.Component
 
     set_frame_mars ()
         {
-        this.props.set_focus ("MARS")
+        this.props.set_frame ("MARS")
         }
 
     set_frame_mercury ()
         {
-        this.props.set_focus ("MERCURY")
+        this.props.set_frame ("MERCURY")
         }
     set_frame_venus ()
         {
-        this.props.set_focus ("VENUS")
+        this.props.set_frame ("VENUS")
         }
 
     set_frame_earth ()
@@ -59,7 +59,7 @@ class Target_Bar extends React.Component
 
     set_frame_L1 ()
         {
-        this.props.set_focus ("L1")
+        this.props.set_frame ("L1")
         }
 
     render ()

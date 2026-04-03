@@ -50,6 +50,7 @@ class Camera_Align extends React.Component
             z_icon: z_axis_icon,
             hover_a: false,
             hover_b: false,
+            label: V3DSpace.target_label,
             }
 
         this._last_click_time = 0
@@ -64,6 +65,9 @@ class Camera_Align extends React.Component
             }
 
         document.addEventListener ('off_axis', handle_off_axis)
+        document.addEventListener ('focus_change', (e) => {
+            this.setState ({label: V3DSpace.target_label})
+            })
          
         this.sng_click_x = this.sng_click_x.bind (this)
         this.dbl_click_x = this.dbl_click_x.bind (this)
@@ -289,7 +293,7 @@ class Camera_Align extends React.Component
             transform: this.state.hover_b ? 'scale(1.5)' : '',
             }
                 
-        const label = (this.state.dropdown_open)? "" :  this.props.focus_label 
+        const label = (this.state.dropdown_open)? "" :  this.state.label
 
         const dropdown_open = this.state.dropdown_open
 

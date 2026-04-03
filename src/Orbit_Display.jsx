@@ -1124,7 +1124,7 @@ class Display_Manager extends React.Component
         //const yz_grid = this.create_yz_grid () ;
         //const xy_grid = this.create_xy_grid () ;
 
-        const top_center = (this.props.block_transport_bar)? null : <Camera_Align focus_label={this.props.target} />
+        const top_center = (this.props.block_transport_bar)? null : <Camera_Align />
 
 
         return (
@@ -1139,7 +1139,6 @@ class Display_Manager extends React.Component
                         block_transport_bar={this.props.block_transport_bar}
                         show_sc_position={this.props.show_sc_position}
                         invert={V3DSpace.icon_shade}
-                        set_focus={this.props.set_focus}
                         />
 
                     <Icon_Bar 
@@ -1177,7 +1176,6 @@ class Display_Manager extends React.Component
 
                     <Target_Bar
                         set_frame={this.props.set_frame} 
-                        set_focus={this.props.set_focus}
                         visible={! this.props.block_transport_bar}
                         invert={V3DSpace.icon_shade}
                         />
@@ -1353,7 +1351,7 @@ class Obs_List extends React.Component
                     {V3DSpace.sc_pos_list.map (s =>
                         <div key={s.name} 
                             className="right_overlay_row overlay_row_font"
-                            onClick={() => {this.props.set_focus (s.id)}}
+                            onClick={() => {V3DSpace.set_focus (s.id)}}
                             >
                             {this.create_row (s.name, s.x, s.y, s.z, s.color)}
                         </div>
@@ -1737,7 +1735,6 @@ class Time_Manager extends React.Component
             <>
                 <Obs_List 
                     visible={this.props.show_sc_position}
-                    set_focus={this.props.set_focus}
                     />
                 <div    className={classes}
                         onMouseEnter={this.handle_mouse_enter_pad}

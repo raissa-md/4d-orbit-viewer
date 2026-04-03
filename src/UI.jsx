@@ -256,7 +256,7 @@ function position_to_transform (pos, offset = "100px")
             break
         }
 
-    console.log ("position_to_transform result: ", JSON.stringify(r))
+    // console.log ("position_to_transform result: ", JSON.stringify(r))
 
     return r
     }
@@ -1024,7 +1024,6 @@ export class V_Tooltip extends React.Component
 
                 if  (r.left < buffer)
                     {
-                    console.log ("Tooltip left out of bounds:", r.left)
                     left = (r.left * -1) + buffer
                     }
 
