@@ -1070,6 +1070,8 @@ class display_space
                 // this._sub_title = 'Body-Centered GSE' ?? Check wording here
 
                 this.entity_manager.set_coord_center (frame)
+
+                this._target_label = this.entity_manager.get (frame).name
                 }
 
             else
@@ -1080,8 +1082,6 @@ class display_space
                 // Not best logic, but it should work.
                 return ""
                 }
-
-            this._target_label = frame
 
             // this.entity_manager.set_focus (frame)
             }
