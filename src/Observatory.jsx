@@ -58,6 +58,7 @@ import { DEF_BACKGROUND_COLOR } from './constants.js'
 import { DEF_GRID_SIZE, DEF_GRID_SCALE, DEF_GRID_OFFSET } from './constants'
 
 import { V3DSpace } from './App.jsx'
+import { Orbit_Data } from './App.jsx'
 import Ghost_Menu from './ghost_selection.jsx'
 import { SELECT_TYPE } from './ghost_selection.jsx'
 
@@ -1388,6 +1389,23 @@ class Options extends React.Component
                         anchor_point="left"
                         offset="200px"
                         background={TT_BGCOLOR}                            
+                        text={`Display spacecraft orbits relative to the selected target planet or
+                                object even if a coordinate system has not been implemented for that
+                                reference frame.`}
+                        >
+                        Display orbits relative to target
+                    </V_Tooltip>
+                    <Switch 
+                        onChange={this.props.toggle_relative_orbits}
+                        checked={this.props.show_relative_orbits}
+                        />
+                </div>
+                <div className= 'grid-row op-text grid-col-span'>
+                    <V_Tooltip    
+                        align="right" 
+                        anchor_point="left"
+                        offset="200px"
+                        background={TT_BGCOLOR}                            
                         text={`Show floating labels near displayed spacecraft. When disabled,
                                 no floating labels will be visible.`}
                         >
@@ -2597,6 +2615,8 @@ class Base_Layout extends React.Component
                 show_decals={this.state.show_decals}
                 show_planet_decals={this.state.show_planet_decals}
                 toggle_show_decals={this.toggle_show_decals}
+                toggle_relative_orbits={this.props.toggle_relative_orbits}
+                show_relative_orbits={this.props.relative_orbits}
                 toggle_show_planet_decals={this.toggle_show_planet_decals}
                 show_sc_position={this.state.show_sc_position}
                 toggle_show_sc_position={this.toggle_show_sc_position}
@@ -3047,8 +3067,11 @@ class Base_Layout extends React.Component
 
             const id = sc [i]
             
-            const time = V3DSpace.get_orbit_times (id)
-            const coord = V3DSpace.get_orbit_coord (id, COORD_System.GSE)
+            //const time = V3DSpace.get_orbit_times (id)
+            //const coord = V3DSpace.get_orbit_coord (id, COORD_System.GSE)
+
+            const time = Orbit_Data.get_time_vector (id)
+            const coord = Orbit_Data.get_orbit_vector (id)
 
             const n = time.length 
             const tstart = moment.utc(time [0]).format(dfrmt) 
@@ -3282,7 +3305,6 @@ class Base_Layout extends React.Component
                     display={this.state.l_sidebar_visible}
                     get_new_color={this.props.get_new_color}
                     get_new_shape={this.props.get_new_shape}
-                    set_focus={this.props.set_focus}
                     request={this.props.request}
                     sats={this.props.sats}
                     hide_l_sidebar={this.hide_l_sidebar}
@@ -3297,7 +3319,6 @@ class Base_Layout extends React.Component
                     start_time={this.props.start_time}
                     end_time={this.props.end_time}
                     set_frame={this.props.set_frame}
-                    set_focus={this.props.set_focus}
                     target={this.props.target}
                     update_master_time={this.props.update_master_time}
                     transport_bar_help={this.display_transport_bar_help_dialog}
@@ -3371,6 +3392,7 @@ class Manager extends React.Component
             time: t0,
             text: "",
             color: null,
+            relative_orbits: false,
             orbit_recolor_key: null,
             show_color_dialog: false,
             display_properties: null,
@@ -3391,7 +3413,7 @@ class Manager extends React.Component
         this.get_new_color = this.get_new_color.bind (this)
         this.get_new_shape = this.get_new_shape.bind (this)
         this.handle_OK = this.handle_OK.bind (this)
-        this.set_focus = this.set_focus.bind (this)
+        this.toggle_relative_orbits=this.toggle_relative_orbits.bind (this) 
         this.set_frame = this.set_frame.bind (this)
         this.handle_keypress = this.handle_keypress.bind (this)
         this.update_master_time = this.update_master_time.bind (this)
@@ -3602,21 +3624,18 @@ class Manager extends React.Component
         this.setState ({GS: ground_stations}) ;
         }
 
-    set_focus (id)
+    toggle_relative_orbits ()
         {
-        this.setState ({target: V3DSpace.set_focus (id)})
+        this.setState ({relative_orbits: (this.state.relative_orbits === false)? true : false,}) ;
         }
-        
+       
     set_frame (frame="EARTH")
         {
-        if  (V3DSpace.update_frame (frame))
+        const msg = V3DSpace.update_frame (frame, this.state.relative_orbits)
+
+        if  (msg)
             {    
-            const new_system = coord_system_to_key (V3DSpace.coord_system)
-    
-            const status_msg = `Coordinate has been changed to ${new_system} to align
-                         with new target`
-    
-            V3DSpace.entity_manager.msg_portal.add_alert (ALERT.custom, status_msg, 7)     
+            V3DSpace.entity_manager.msg_portal.add_alert (ALERT.custom, msg, 7)     
             } 
 
         this.setState ({target: V3DSpace.target_label})
@@ -3825,13 +3844,14 @@ class Manager extends React.Component
                             update_view_end_time={this.update_view_end_time}
                             get_new_color={this.get_new_color}
                             get_new_shape={this.get_new_shape}
-                            set_focus={this.set_focus}
                             set_frame={this.set_frame}
                             target={this.state.target}
                             time={this.state.time}
                             update_master_time={this.update_master_time}
                             msg={this.message}
                             request={this.default_request}
+                            toggle_relative_orbits={this.toggle_relative_orbits}
+                            relative_orbits={this.state.relative_orbits}
                             coord_system={this.state.coord_system}
                             update_coord_system={this.update_coord_system}
                             />

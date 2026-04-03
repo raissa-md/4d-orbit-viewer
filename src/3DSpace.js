@@ -40,6 +40,7 @@ import { DEF_HELIO_COORD_SYS } from './Orbit.js'
 import { DEF_GEO_COORD_SYS } from './Orbit.js'
 import { COORD_Unit } from './Orbit.js'
 import { coord_system_to_frame } from './Orbit.js'
+import { coord_system_to_key } from './Orbit.js'
 import { JN, SSC_WS } from './ssc_ws.js'
 import Grid from './grids';
 import Axes from './Axes.js'
@@ -495,7 +496,15 @@ class display_space
         this.update_xy_grid_options = this.update_xy_grid_options.bind (this)
 
         // Global object to store log messages
-        window.log_messages = [];
+        window.log_messages = []
+
+        // Custom event to trigger when focus changes.  This is used to update the camera align button label.
+        this._focus_change_event = new CustomEvent ("focus_change", 
+            {
+            bubbles: true,
+            detail: { label: "not used" }
+            })
+
 
         // Function to emulate the sprintf like functionality of console.log
         // This needs to do more to decompose integer specifications
@@ -709,6 +718,7 @@ class display_space
 
         this._controls = new my_orbital_controls ( this._camera, this._display, this.entity_manager)
         
+        // Start with the Earth as the focus.
         this.update_frame ('EARTH')
 
         this.set_coord_system (DEF_GEO_COORD_SYS)
@@ -928,17 +938,16 @@ class display_space
         }
     */
 
-    update_frame (frame)
+    update_frame (frame, enable_relative_orbits = false)
         {   
-        // frame is the center of a fixed coordinate system. it is set in Manager
-        // currently only Earth is implemented
-
-        // Eventually we will add the logic for switching between different frames here
-        // But since we only one frame here, for the moment this won't be used.
-        // const frame = (this.props.frame)? this.props.frame : this.state.frame_target 
+        // frame is the center of a fixed coordinate system. 
 
         let distance = 5
-        let coord_system_reset = false
+
+        // Return value.
+        // When not an empty string, an appropriate message that the coordinate system has 
+        // changed.  This is used by Manager.set_frame.
+        let coord_reset_msg = ""
 
         if (frame === "EARTH" )
             {
@@ -946,10 +955,15 @@ class display_space
                 {
                 this.entity_manager.set_coord_system (DEF_GEO_COORD_SYS)
 
+                const new_system = coord_system_to_key (DEF_GEO_COORD_SYS)
+                
                 this.set_unit (get_default_unit (DEF_GEO_COORD_SYS))
 
-                coord_system_reset = true
+                coord_reset_msg = `Coordinate has been changed to ${new_system} to align
+                         with new target`
                 }
+
+            this.entity_manager.set_coord_center ()
 
             this.entity_manager.clear_focus ()
 
@@ -986,10 +1000,15 @@ class display_space
                 {
                 this.entity_manager.set_coord_system (DEF_HELIO_COORD_SYS)
 
+                const new_system = coord_system_to_key (DEF_HELIO_COORD_SYS)
+
                 this.set_unit (get_default_unit (DEF_HELIO_COORD_SYS))
 
-                coord_system_reset = true 
+                coord_reset_msg = `Coordinate has been changed to ${new_system} to align
+                         with new target`
                 }
+
+            this.entity_manager.set_coord_center ()
 
             this.entity_manager.clear_focus ()
 
@@ -1022,7 +1041,52 @@ class display_space
 
         else
             {
+            // Otherwise, we are focusing on a planetary without a defined coordinate system.  
+            // In this case we will just switch the focus to the planet and if relative orbits
+            // are enabled we will switch to GSE and set the coordinate center to the planet.
+            if (enable_relative_orbits)
+                {
+                coord_reset_msg = `Viewing spacecraft relative to ${frame} in GSE-aligned coordinate system.`
+
+                // Check for GSE here.  If it's not GSE then we will switch to GSE 
+                // and update the coordinate center to the requested object.  If it 
+                // is GSE then we will just update the coordinate center.
+                if  (this.entity_manager.coord_system !== COORD_System.GSE)
+                    {
+                    this.entity_manager.set_coord_system (COORD_System.GSE)
+
+                    const new_system = coord_system_to_key (COORD_System.GSE)
+
+                    this.set_unit (get_default_unit (COORD_System.GSE))
+
+                    // This is probably too long for the current message box. 
+                    //  We may want to shorten it or split it into two messages.
+                    coord_reset_msg += ` Coordinate system has been changed to ${new_system} to support relative
+                                            orbit display.`
+                    }
+                
+
+                // Not implemented yet.
+                // this._sub_title = 'Body-Centered GSE' ?? Check wording here
+
+                this.entity_manager.set_coord_center (frame)
+                }
+
+            else
+                {
+                this.entity_manager.set_coord_center (null)
+                this.set_focus (frame)
+
+                // Not best logic, but it should work.
+                return ""
+                }
+
+            this._target_label = frame
+
+            // this.entity_manager.set_focus (frame)
             }
+
+        document.dispatchEvent (this._focus_change_event)
 
         const target = new THREE.Vector3 (0., 0., 0.)
 
@@ -1032,8 +1096,7 @@ class display_space
         this._controls.target.copy (target)
         this.target (distance, this.get_camera_vector ('X'))  //No need to specify target
 
-
-        return coord_system_reset
+        return coord_reset_msg
         }
 
     update_camera_to_follow (refocus=false)
@@ -1605,6 +1668,13 @@ class display_space
         this.entity_manager.set_coord_system (system)
 
         // Check if the default coordinate system changed.  
+        // This is bad because it relies on each class of coordinate systems having
+        // a unique default unit.  We should probably have a more explicit way 
+        // to check this.
+        // I doubt this will work for anything other than the Earth and the Sun.
+        // The point here is to automatically switch to the central object of the selected coordinate 
+        // system.  For instance, switching to the Sun when a Heliocentric coordinate system
+        // is selected.
         if (get_default_unit (system) !== get_default_unit (current))
             {
             const unit = get_default_unit (system)
@@ -1682,6 +1752,7 @@ class display_space
 
         if  (focus && focus.id === id)
             {
+            // Reset the focus to the central object of the current coordinate system.
             this.update_frame (coord_system_to_frame (this.entity_manager.coord_system))
             }
 
@@ -1723,9 +1794,15 @@ class display_space
             console.log ("3DSpace: set_focus: Target " + target + " not valid.")
             return null
             }
-        console.log ("Setting focus to " + target)
-        
         this._target_label = this.entity_manager.set_focus (target, ...args)
+
+        // Send the focus_event so that camera align can update the target label.  
+        // The event itself doesn't specify a new label, this information is queried from 
+        // the 3DSpace object by the camera align code.
+        document.dispatchEvent (this._focus_change_event)
+
+        console.log ("Setting focus to " + this._target_label)
+
         // Actually have to focus the camera maybe?
         this.update_camera_to_follow (true)
 
@@ -1756,9 +1833,17 @@ class display_space
 
     clear_focus (...args)
         {
+        // This needs to return the name of the new focus so that the Manager
+        // can update the target label. 
+
         this.entity_manager.clear_focus ()
 
-        return this.update_frame (coord_system_to_frame (this.entity_manager.coord_system))
+        // Reset the focus to the central object of the current coordinate system.
+        const new_target = coord_system_to_frame (this.entity_manager.coord_system)
+
+        this.update_frame (new_target)
+
+        return new_target
         }
 
     set_magnetopause_visible (visible)

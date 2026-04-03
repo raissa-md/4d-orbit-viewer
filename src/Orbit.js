@@ -1903,6 +1903,7 @@ export function GSE_to_Frame (...args)
     return transform_coordinates (GSE_to_Frame_base, ...args) 
     }
 
+/* No longer used.
 export class Calculate_Planet_Orbit
     {
     constructor ()
@@ -2062,4 +2063,5 @@ export class Calculate_Planet_Orbit
             }) ;
         } 
     }
+*/
 

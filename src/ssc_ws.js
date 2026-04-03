@@ -1,6 +1,7 @@
 import { EARTH_RADIUS } from './Orbit.js'
 import { COORD_Unit } from './Orbit.js'
 import { SSC_WS_ACCESS } from './constants.js'
+import { Orbit_Data } from './App.jsx'
 
 
 const SSC_REQ_HEADERS = new Headers ({
@@ -412,7 +413,7 @@ export class SSC_WS
         return orbit
         }
     
-    static async get_orbit_data (id, t0, t1, frequency = 2, coord_system = 'GSE', unit = COORD_Unit.RE)
+    static async get_orbit_data (id, t0, t1, frequency = 2, coord_system = 'GSE', unit = COORD_Unit.RE, ref_id = null)
         {
         // const odr = new orbit_data_request (id, t0, t1, frequency, coord_system)
 
@@ -428,6 +429,14 @@ export class SSC_WS
                 }
             );
         */
+
+        // ref_id is the identifier used to store and retrieve the orbit data from the Orbit_Data class.
+        // If ref_id is null, then id will be used as the identifier.  
+        // This allows for planets where the actual id is different from the id used to retrieve the data.
+        if  (ref_id === null)
+            {
+            ref_id = id
+            }
 
         // const url_base = 'https://sscweb.gsfc.nasa.gov/WS/sscr/2/locations' 
         const url_base = SSC_WS_ACCESS + 'WS/sscr/2/locations' 
@@ -486,8 +495,11 @@ export class SSC_WS
 
                 const success = {name: 'success', t0: req_time, time: new Date ().getTime (), id: id}
                 JN.log ((SSC_WS.log_event (success)))
-                    
-                return orbit
+
+                // Instead of returning the orbit data, store it in a central location.
+                Orbit_Data.store_orbit_data (ref_id, orbit.time, orbit.coord)
+
+                return true // Not really sure what should be returned here.
                 })
         }
     }
