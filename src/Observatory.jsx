@@ -2758,6 +2758,8 @@ class Base_Layout extends React.Component
 
         //const text = (use_main)? main_help : chooser_help
 
+        const url = V3DSpace.create_url ()
+
         const url_display =<div 
                                 style={{width: '95%', 
                                     overflowWrap: 'anywhere', 
