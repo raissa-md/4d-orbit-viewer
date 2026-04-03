@@ -1619,16 +1619,11 @@ class spacecraft extends entity
 
         return r.then (() =>
             {
-            console.log ("orbit data retrieved for ", this._id)
-
             // Stash the orbit data somewhere
             this.dispose_orbit (true)
 
-            console.log ("old orbit data (if any) removed for ", this._id)
-
             this.create_orbit ()
 
-            console.log ("New orbit path created for ", this._id)
             this.create_direction_indicator ()
 
             // Update spacecraft position to current time 
@@ -1891,8 +1886,6 @@ class spacecraft extends entity
             {
             this._coord_center = center
 
-
-            console.log ("Recreatting orbit. New coordinate center set for ", this._id, ": ", this._coord_center)
             this.recreate_orbit ()
             }
         }
@@ -1918,7 +1911,6 @@ class spacecraft extends entity
         {
         // If all is true, dispose of the orbit and the orbit direction indicator
         // If all is false, only dispose of the orbit.
-        console.log ('removing orbit for ', this._id)
         if  (this._orbit_path.length > 0)
             {
             for (let i = 0 ; i < this._orbit_path.length ; i++)

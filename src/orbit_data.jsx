@@ -185,7 +185,7 @@ export class Orbit_Data_Store
         // Check if center is specified
         if  (center === null)
             {
-            console.log ("Returning absolute orbit data for ", id)
+            // console.log ("Returning absolute orbit data for ", id)
 
             return this.get_orbit_vector (id)
             }
@@ -216,8 +216,6 @@ export class Orbit_Data_Store
                 z: target_orbit[i].z - center_pos.z
                 });
             }
-
-        console.log ("Returning relative orbit data for ", id, " relative to ", center) 
 
         return relative_orbit 
         }
