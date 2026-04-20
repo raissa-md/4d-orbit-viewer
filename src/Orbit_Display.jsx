@@ -1687,7 +1687,16 @@ class Time_Manager extends React.Component
         // const time_string = "this is time" 
     
         let classes = ""
+        //let effect = ""
         let time_display = null 
+
+        /* Not used.  Now using themes.
+        // Invert the text color if the background is light to make it more visible.
+        if  (this.props.invert > 50)
+            {
+            effect = "VUI-btn-dark-mode "
+            }
+        */
 
         if  (this.props.block_transport_bar)
             {
@@ -1698,10 +1707,10 @@ class Time_Manager extends React.Component
             {
             classes = (! this.state.transport_bar_visible && this.props.hide_time_control) ?
                     "pointer-events transport_bar hide_transport_bar" :
-                    "pointer-events transport_bar show_transport_bar" ;
+                    `pointer-events transport_bar show_transport_bar` ;
 
             time_display =                 
-                <div className="system_time">
+                <div className={`system_time`}>
                     {this.state.time_string}
                 </div> ;
             }
@@ -1762,6 +1771,7 @@ class Time_Manager extends React.Component
                                             size="small"
                                             onClick={V3DSpace.toggle_pause_play} 
                                             image={animation_icon}
+                                            shade={V3DSpace.icon_shade}
                                             alt="Animate Display"
                                             />
                                     </V_Tooltip>
@@ -1792,6 +1802,7 @@ class Time_Manager extends React.Component
                                                 size="medium"
                                                 onClick={this.props.transport_bar_help} 
                                                 image={help_icon}
+                                                shade={V3DSpace.icon_shade}
                                                 alt="Help"
                                                 />
                                     </V_Tooltip>
@@ -1823,6 +1834,7 @@ class Time_Manager extends React.Component
                                 onChange={V3DSpace.slider_position}
                                 tooltip={{open: false}}
                                 value={this.state.pos}
+                                styles={{ rail: {backgroundColor: '#c2bbd5'} }}
                                 />
                         </div>
                         <div className='transport_bar_row_3'>

@@ -4,10 +4,15 @@
 :root {
   --button_bar_height: 60px ;
   --button_bar_width: 60px ;
-  --default_text_color: rgb(238, 238, 222) ;
+  --contrast-text-color: #111121;
+  --default-text-color: #EEEEDE;
   --dlg_heading_color: #070101 ;
   --dlg_text_color:#070101 ;
-  --txt_color: #EEEEDE;
+  --txt_color: var(--default-text-color) ;
+}
+
+[data-theme="contrast"] {
+  --txt_color: var(--contrast-text-color) ;
 }
 
 html {

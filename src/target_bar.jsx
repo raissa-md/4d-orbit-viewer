@@ -78,7 +78,7 @@ class Target_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={earth_icon}
                 alt="Fix the Camera on the Earth."
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -94,7 +94,7 @@ class Target_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={moon_icon}
                 alt="Fix the Camera on the Moon."
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -110,7 +110,7 @@ class Target_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={sun_icon}
                 alt="Fix the Camera on the Sun."
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -127,7 +127,7 @@ class Target_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={mercury_icon}
                 alt="Fix the Camera on Mercury."
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ; 
 
@@ -143,7 +143,7 @@ class Target_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={venus_icon}
                 alt="Fix the Camera on Venus."
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -159,7 +159,7 @@ class Target_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={mars_icon}
                 alt="Fix the Camera on Mars."
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -175,7 +175,7 @@ class Target_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={L1_icon}
                 alt="Fix the Camera on the Lagrange Point 1 (L1)."
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 

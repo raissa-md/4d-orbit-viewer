@@ -99,7 +99,7 @@ class Function_Bar extends React.Component
 
     render ()
         {    
-        //const TT_BGCOLOR = "darkblue" ;
+        //const TT_BGCOLOR = "shadeblue" ;
         //const filter={filter: "invert(" + this.props.invert.toFixed() + "%)"}
 
         const ambient_icon = (this.state.ambient_light)? ambient_on_icon : ambient_off_icon
@@ -117,7 +117,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={bowshock_icon}
                 alt="show bowshock button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 toggle={this.state.bs_visible}
                 />
         </V_Tooltip> ;
@@ -134,7 +134,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={magneto_icon}
                 alt="show magnetopause button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 toggle={this.state.magneto_visible}
                 />
         </V_Tooltip> ;
@@ -151,7 +151,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={x_grid_icon}
                 alt="show YZ grid button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 toggle={this.state.yz_grid}
                 />
         </V_Tooltip> ;
@@ -168,7 +168,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={y_grid_icon}
                 alt="show XZ grid button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 toggle={this.state.xz_grid}
                 />
         </V_Tooltip> ;
@@ -185,7 +185,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={z_grid_icon}
                 alt="show XY grid button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 toggle={this.state.xy_grid}
                 />
         </V_Tooltip> ;
@@ -202,7 +202,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={perspective_icon}
                 alt="perspective camera button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 toggle={this.props.camera_type === PERSP_CAMERA}
                 />
         </V_Tooltip> ;
@@ -219,7 +219,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={orthogonal_icon}
                 alt="orthographic camera button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 toggle={this.props.camera_type === ORTHO_CAMERA}
                 />
         </V_Tooltip> ;
@@ -236,7 +236,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={terminator_icon}
                 alt="show terminator line button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 toggle={this.state.terminator_visible === true}
                 />
         </V_Tooltip> ;
@@ -253,7 +253,7 @@ class Function_Bar extends React.Component
                 style={SIDE_BUTTON_STYLE}
                 image={ambient_icon}
                 alt="toggle ambient light button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 

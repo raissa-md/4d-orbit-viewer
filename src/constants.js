@@ -39,8 +39,8 @@ export const DIM_AMBIENT_INTENSITY = .25
 
 const root_style = getComputedStyle (document.documentElement)
 
-const def_button_height = root_style.getPropertyValue("--button_req_height").trim()
-const def_button_width  = root_style.getPropertyValue("--button_req_width").trim()
+const def_button_height = root_style.getPropertyValue("--button-req-height").trim()
+const def_button_width  = root_style.getPropertyValue("--button-req-width").trim()
 
 // const def_button_height = "48px"
 // const def_button_width  = "48px"
@@ -84,10 +84,10 @@ export const SIDE_BUTTON_STYLE = {
     margin: "0.8rem 0.5rem",
     }
 
-export const DARK_ICON_SHADE = 100
-export const LIGHT_ICON_SHADE = 0     
-export const DARK_TEXT_COLOR = "#111121"
-export const LIGHT_TEXT_COLOR = "#EEEEDE"
+export const DARK_ICON_SHADE = 100    // light mode.
+export const LIGHT_ICON_SHADE = 0     // dark mode
+export const DARK_TEXT_COLOR = root_style.getPropertyValue("--contrast-text-color").trim()
+export const LIGHT_TEXT_COLOR = root_style.getPropertyValue("--default-text-color").trim()
 
 export const DEF_BACKGROUND_COLOR = "#000000"
 
