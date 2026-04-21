@@ -1545,6 +1545,11 @@ class display_space
         return this.entity_manager.coord_system
         }
 
+    get coord_center ()
+        {
+        return this.entity_manager.coord_center
+        }
+
     get terminator_line ()
         {
         return this.entity_manager.terminator_line

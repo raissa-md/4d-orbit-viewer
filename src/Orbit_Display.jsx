@@ -1292,11 +1292,19 @@ class Obs_List extends React.Component
             {
             const unit_str = unit_to_string (V3DSpace.unit)
             const coord_str = coord_system_to_key (V3DSpace.coord_system)
+            const coord_ctr = V3DSpace.coord_center
 
-            const text = `spacecraft positions in ${unit_str} in ${coord_str} coordinates` 
+            let text = `spacecraft positions in ${unit_str} in ${coord_str} coordinates` 
+            let disc = null
+
+            if  (coord_ctr)
+                {
+                disc = `PLEASE NOTE: positions are relative to ${coord_str} origin, not ${coord_ctr}`
+                }
 
             const row = <div className='overlay_legend'>
-                            {text}
+                            <div>{text}</div>
+                            {disc && <div>{disc}</div>}
                         </div> ;
 
             return row 

@@ -2636,6 +2636,12 @@ export class entity_manager
         return this._coord_system
         }
 
+    get coord_center ()
+        {
+        // Return null if the center is the origin, otherwise return the center.
+        return this._coord_center
+        }
+
     get unit ()
         {
         return this._unit
