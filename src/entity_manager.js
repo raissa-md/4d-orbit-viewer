@@ -637,11 +637,13 @@ export class entity
             }
         }
 
-    set_label_color (...args)
+    set_label_color (color)
         {
+        this._label_color = color
+
         if  (this._label)
             {
-            this._label.set_color (...args)
+            this._label.set_color (color)
             }
         }
 
@@ -2005,6 +2007,7 @@ export class entity_manager
         //actor.set_frame (this._reference_frame)
         actor.set_coord_system (this._coord_system)
         actor.set_coord_center (this._coord_center)
+        actor.set_label_color (this.text_color)
 
         this.list.set (actor.id, actor)
 
@@ -2454,6 +2457,16 @@ export class entity_manager
         this._icon_shade = (this.light_overlay)? this.light_shade : this.dark_shade
 
         this.update_label_color (this.text_color)
+
+        // Update the CSS theme
+        if (this.light_overlay)
+            {
+            root.removeAttribute ('data-theme')
+            }
+        else
+            {
+            root.setAttribute ('data-theme', 'contrast')
+            }
         }
 
     set_color  (id, ...args)
@@ -2621,6 +2634,12 @@ export class entity_manager
     get coord_system ()
         {
         return this._coord_system
+        }
+
+    get coord_center ()
+        {
+        // Return null if the center is the origin, otherwise return the center.
+        return this._coord_center
         }
 
     get unit ()

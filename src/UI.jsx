@@ -352,7 +352,8 @@ export class V_Button extends React.Component
         onMouseOver: null,
         onMouseLeave: null,
         toggle: false,
-        dark: 0,  // this value will eventually be truthy/falsy
+        shade: 0,   // ranges between 0 and 100,
+                    //  where 0 is light (pure white) and 100 is dark (pure black).  
         } ;
 
     render() 
@@ -362,7 +363,7 @@ export class V_Button extends React.Component
             tabIndex,
             alt,
             image,
-            dark,
+            shade,
             toggle,
             onClick,
             onContextMenu,
@@ -374,7 +375,7 @@ export class V_Button extends React.Component
             } = this.props ;
 
         const merged = {
-            background: "transparent",
+            background: null,
             border: "none",
             padding: "0",
             display: "flex",
@@ -438,8 +439,9 @@ export class V_Button extends React.Component
             effect += "VUI-btn-selected "
             }
 
-        if  (dark > 0)
+        if  (shade > 0)
             {
+            // Temporary: this should eventually scale.
             effect += "VUI-btn-dark-mode "
             }
 
@@ -554,7 +556,7 @@ export class V_Modal extends React.Component
             height = "auto",
             fontSize = "medium",
             fontWeight = 500,
-            fontFamily= "Roboto, Lato, Ubuntu, Nunito, Manrope, sans-serif",
+            fontFamily= "inherit",
             color = "rgba(0, 0, 0, 0.88)",
             background = "rgb(245, 245, 245)",
             titleColor = color,
@@ -607,7 +609,6 @@ export class V_Modal extends React.Component
         }   
     }
 
-
 export class V_Checkbox extends React.Component 
     {
     handle_change = (event) => {
@@ -627,8 +628,21 @@ export class V_Checkbox extends React.Component
             checked = false,
             disabled = false,
             offset = ".5em",
-            label
+            label,
+            shade = 100,    // ranges between 0 and 100,
+                            //  where 0 is light (pure white) and 100 is dark (pure black).  
             } = this.props;
+
+        let effect = ""
+
+        // Apply dark mode class if shade is less then 50 
+        // (this is temporary until we implement a more robust theming solution)
+        // Note: 'dark mode' just does a simple color inversion and since the checkbox is 
+        // mostly black, we want to apply it when the shade is low (light) to make it more visible.
+        if  (shade < 50)
+            {
+            effect = "VUI-btn-dark-mode "
+            }
 
         const checkbox_label = label ? 
                 <span style={{marginLeft: offset}} className="VUI-checkbox-label">
@@ -637,15 +651,16 @@ export class V_Checkbox extends React.Component
                 : null ;
 
         return (
-            <label className="VUI-checkbox-container">
+            <label className={`VUI-checkbox-container ${effect}`}>
                 <input
                     type="checkbox"
                     checked={checked}
                     disabled={disabled}
                     onChange={this.handle_change}
+                    className="VUI-checkbox-hidden"
                     />
 
-                <span className="VUI-checkbox-box" />
+                <span className="VUI-checkbox-custom" />
 
                 {checkbox_label}
             </label>
@@ -674,7 +689,22 @@ export class V_Radio_Button extends React.Component
             offset = ".5em",
             group = "radio_group",
             label,
+            shade = 100,  // ranges between 0 and 100,
+                        //  where 0 is light (pure white) and 100 is dark (pure black).  
             } = this.props;
+
+        let effect = ""
+
+        // Apply dark mode class if shade is less then 50 
+        // (this is temporary until we implement a more robust theming solution)
+        // Note: 'dark mode' just does a simple color inversion and since the radio button is 
+        // mostly black, we want to apply it when the shade is low (light) to make it more visible.
+        // NB: Currently radio buttons are only used in modal boxes which are always light, 
+        // so this is mostly just a precaution for future use cases.
+        if  (shade < 50)
+            {
+            effect = "VUI-btn-dark-mode "
+            }
 
         const radio_label = label ? 
                 <span style={{marginLeft: offset}} className="VUI-radio-label">
@@ -683,7 +713,7 @@ export class V_Radio_Button extends React.Component
                 : null ;
 
         return (
-            <label className="VUI-radio-container">
+            <label className={`VUI-radio-container ${effect}`}>
                 <input
                     type="radio"
                     name={group}

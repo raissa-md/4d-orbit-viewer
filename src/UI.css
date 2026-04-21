@@ -1,21 +1,31 @@
-
 :root {
-  --button_req_height: 48px ;
-  --button_req_width: 48px ;
+  --button-req-height: 48px ;
+  --button-req-width: 48px ;
+  --light-hover-color: #FFFFFF;
+  --dark-hover-color: #000000;
+  --border-color: #1a1a1a;
+  --color-fill-selected: #5e8cee;
+  --color-bg-selected: #404096;
+  --color-bg-hover: transparent;
+  --color-bg-active: transparent;
+  --color-bg: transparent;
+  --color-focus-ring: #2563eb;
+  --test: #404096;
 }
 
 /* Base styles for the button */
 .VUI-btn {
-  background: transparent;
+  background: var(--color-bg);
   border: none;
   outline: none;
-  transition: filter 0.15s, background 0.15s;
+  transition: transform 0.3s ease;
   border-radius: 4px; /* feels good for icons without looking like a pill */
 }
 
 /* Hover on ghost icon button */
 .VUI-btn:hover:not(:disabled) {
   background: var(--color-bg-hover);
+  transform: scale(1.2)
 }
 
 /* Active / pressed */
@@ -31,8 +41,10 @@
 
 /* Focus ring */
 .VUI-btn:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline-width: 2px ;
+  outline-style: solid;
+  outline-color:  var(--border-color);
+  outline-offset: 1px;
 }
 
 /* For icon-only buttons: avoid image shifting */
@@ -41,7 +53,7 @@
 }
 
 .VUI-btn-selected {
-  background: #404096 ;
+  background: var(--color-bg-selected) ;
 }
 
 .VUI-btn-dark-mode {
@@ -49,28 +61,28 @@
 }
 
 .VUI-btn-small {
-  height: calc(.55 * var(--button_req_height));
-  width:  calc(.55 * var(--button_req_width));
+  height: calc(.55 * var(--button-req-height));
+  width:  calc(.55 * var(--button-req-width));
 }
 
 .VUI-btn-standard {
-  height: calc(.7 * var(--button_req_height));
-  width:  calc(.7 * var(--button_req_width));
+  height: calc(.7 * var(--button-req-height));
+  width:  calc(.7 * var(--button-req-width));
 }
 
 .VUI-btn-large {
-  height: calc(1.2 * var(--button_req_height));
-  width:  calc(1.2 * var(--button_req_width));
+  height: calc(1.2 * var(--button-req-height));
+  width:  calc(1.2 * var(--button-req-width));
 }
 
 .VUI-btn-med {
-  height: calc(.9 * var(--button_req_height));
-  width:  calc(.9 * var(--button_req_width));
+  height: calc(.9 * var(--button-req-height));
+  width:  calc(.9 * var(--button-req-width));
 }
 
 .VUI-btn-spdf {
-  height: calc(.7 * var(--button_req_height));
-  width:  calc(1.2 * var(--button_req_width));
+  height: calc(.7 * var(--button-req-height));
+  width:  calc(1.2 * var(--button-req-width));
 }
 
 .VUI-modal-backdrop {
@@ -145,31 +157,60 @@
   align-items: center;
   cursor: pointer;
   gap: 0.4rem;
+  user-select: none;
 }
 
-.VUI-checkbox-container input {
-  display: none;
-}
-
-.VUI-checkbox-box {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #333333;
-  border-radius: 3px;
-  background: white;
-  position: relative;
-}
-
-.VUI-checkbox-container input:checked + .VUI-checkbox-box {
-  background: #2563eb;
-  border-color: #2563eb;
-}
-
-.VUI-checkbox-container input:checked + .checkbox-box::after {
-  content: "";
+/* Hide the default checkbox. We use a custom styled box instead */
+.VUI-checkbox-hidden {
   position: absolute;
-  inset: 2px;
-  background: rgb(163, 40, 40);
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Custom checkbox box based on a span */
+.VUI-checkbox-custom {
+  outline-width: 2px ;
+  outline-style: solid;
+  outline-color:  var(--border-color);
+  outline-offset: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  background: transparent;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+/* When the checkbox is checked, change the box background and show a check mark. 
+   Hidden unless checked 
+*/
+.VUI-checkbox-custom:after {
+  content: "✓" ;
+  /* content: "x" ; *//* "\2714"; */ /* Unicode check mark */
+  width: 15px ;
+  height: 15px ;
+  border-radius: 3px ;
+  display: flex ;
+  justify-content: center ;
+  align-items: center ;
+  color: black ;
+  background-color: var(--color-fill-selected) ;
+  visibility: hidden ;
+}  
+
+/* Show the check mark when the hidden checkbox is checked */
+.VUI-checkbox-hidden:checked ~ .VUI-checkbox-custom::after {
+  visibility: visible;
+}
+
+.VUI-checkbox-custom:hover {
+  outline-width: 3px ;
+}
+
+.VUI-checkbox-custom:focus-visible {
+  outline-width: 3px ;
+  outline-color: var(--color-focus-ring);
 }
 
 .VUI-checkbox-label {
@@ -192,8 +233,11 @@
   height: 14px;
   border-radius: 50%;
   padding : 2px;
-  border: 2px solid #444444;
+  border: 2px ;
+  border-style: solid ;
+  border-color: var(--border-color);
   background: transparent;
+  transition: all 0.2s ease;
   position: relative;
 }
 
@@ -201,8 +245,12 @@
   content: "";
   position: absolute;
   inset: 3px;
-  background: #2563eb;
+  background: var(--color-fill-selected);
   border-radius: 50%;
+}
+
+.VUI-radio-dot:hover {
+  transform: scale(1.2) ;
 }
 
 .VUI-radio-label {

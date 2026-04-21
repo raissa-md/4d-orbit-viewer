@@ -266,7 +266,7 @@ class Icon_Bar extends React.Component
                     style={context_screenshot_btn}
                     image={screenshot_icon}
                     alt="show screenshot button"
-                    dark={this.props.invert}
+                    shade={this.props.invert}
                     />
                 <V_Button
                     size="small"
@@ -276,7 +276,7 @@ class Icon_Bar extends React.Component
                     style={context_record_btn}
                     image={record_icon}
                     alt="show video record button"
-                    dark={this.props.invert}
+                    shade={this.props.invert}
                     />
             </> ;
 
@@ -294,7 +294,7 @@ class Icon_Bar extends React.Component
                     style={TOP_BUTTON_STYLE}
                     image={help_icon}
                     alt="show top-level help button"
-                    dark={this.props.invert}
+                    shade={this.props.invert}
                     />
         </V_Tooltip> ;
 
@@ -307,11 +307,14 @@ class Icon_Bar extends React.Component
                     whose orbits will be displayed as well as the time range to view
                     them in.`}
             >
-            <div className="icon-top-button"
-                onClick={this.props.toggle_l_sidebar}
-                >
-                <img style={filter} src={menu_icon} className= "icon_image_small" alt="" />
-            </div>
+            <V_Button
+                size="standard"
+                onClick={this.props.toggle_l_sidebar} 
+                style={TOP_BUTTON_STYLE}
+                image={menu_icon}
+                alt="show menu button"
+                shade={this.props.invert}
+                />
 
         </V_Tooltip> ;
 
@@ -329,7 +332,7 @@ class Icon_Bar extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={bookmark_icon}
                 alt="show bookmark button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -349,7 +352,7 @@ class Icon_Bar extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={export_icon}
                 alt="show export button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -363,7 +366,7 @@ class Icon_Bar extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={this.state.btn_icon}
                 alt="show screen capture/record button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
 
         const screenshot_button = 
@@ -403,7 +406,7 @@ class Icon_Bar extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={options_icon}
                 alt="show options button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -420,7 +423,7 @@ class Icon_Bar extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={this.get_coord_sys_icon ()}
                 alt="show coordinate system selection button"
-                dark={this.props.invert}
+                shade={this.props.invert}
                 />
         </V_Tooltip> ;
 
@@ -431,7 +434,6 @@ class Icon_Bar extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={nasa_logo}
                 alt="link to NASA website"
-                dark={this.props.invert}
                 />
 
         const spdf_button = 
@@ -441,7 +443,6 @@ class Icon_Bar extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={spdf_icon}
                 alt="link to SPDF website"
-                dark={this.props.invert}
                 />
 
         const id_string = 
@@ -459,7 +460,7 @@ class Icon_Bar extends React.Component
                         {help_button}
                     </div>
 
-                    <div className="icon_right">
+                    <div className={`icon_right`}>
                         {id_string}
                         {nasa_button}
                         {spdf_button}
@@ -480,7 +481,7 @@ class Icon_Bar extends React.Component
                     {help_button}
                 </div>
 
-                <div className="icon_right">
+                <div className={`icon_right`}>
                     {id_string}
                     {nasa_button}
                     {spdf_button}

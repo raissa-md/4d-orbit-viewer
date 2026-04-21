@@ -4,10 +4,15 @@
 :root {
   --button_bar_height: 60px ;
   --button_bar_width: 60px ;
-  --default_text_color: rgb(238, 238, 222) ;
+  --contrast-text-color: #111121;
+  --default-text-color: #EEEEDE;
   --dlg_heading_color: #070101 ;
   --dlg_text_color:#070101 ;
-  --txt_color: #EEEEDE;
+  --txt_color: var(--default-text-color) ;
+}
+
+[data-theme="contrast"] {
+  --txt_color: var(--contrast-text-color) ;
 }
 
 html {
@@ -213,12 +218,10 @@ div#root {
 
 .overlay_row_font {
   font-size: small;
-  /* color: #EEEEDE; */
 }
 
 .overlay_heading_font {
   font-size: medium;
-  /* color: #EEEEDE; */
   margin-bottom: 10px;
 }
 
@@ -246,9 +249,18 @@ div#root {
 
 .overlay_legend {
   font-size: medium;
-  /* color: #EEEEDE; */
-  justify-content: left ;
+  display: flex ;
+  flex-direction: column ;
+  align-items: center ;
+  gap: 5px ;
+  width: fit-content ;
   padding-top: 10px ;
+}
+
+.overlay_disclaimer {
+  font-size: medium;
+  padding-top: 5px ;
+  text-align: center;
 }
 
 .overlay_col_mark {
@@ -584,7 +596,7 @@ sup {font-size:small; vertical-align:middle;}
 }
 
 .message-text {
-  color: #070101 ;
+  color: #070101 ; /* need to make this a variable */
   font-size: medium ;
   font-weight: bold ;
   margin-left: 8px ;

@@ -308,7 +308,6 @@ class Camera_Align extends React.Component
                     image={plus_x_icon}
                     data-dropdown-item
                     alt="show X-axis camera align button"
-                    dark={this.props.invert}
                     />
                 <V_Button
                     size="small"
@@ -319,7 +318,6 @@ class Camera_Align extends React.Component
                     image={minus_x_icon}
                     data-dropdown-item
                     alt="show reversed X-axis camera align button"
-                    dark={this.props.invert}
                     />
                 </> ;
 
@@ -334,7 +332,6 @@ class Camera_Align extends React.Component
                     image={plus_y_icon}
                     data-dropdown-item
                     alt="show Y-axis camera align button"
-                    dark={this.props.invert}
                     />
                 <V_Button
                     size="small"
@@ -345,7 +342,6 @@ class Camera_Align extends React.Component
                     image={minus_y_icon}
                     data-dropdown-item
                     alt="show reversed Y-axis camera align button"
-                    dark={this.props.invert}
                     />
             </> ;
 
@@ -360,7 +356,6 @@ class Camera_Align extends React.Component
                     image={plus_z_icon}
                     data-dropdown-item
                     alt="show Z-axis camera align button"
-                    dark={this.props.invert}
                     />
                 <V_Button
                     size="small"
@@ -371,7 +366,6 @@ class Camera_Align extends React.Component
                     image={minus_z_icon}
                     data-dropdown-item
                     alt="show reversed Z-axis camera align button"
-                    dark={this.props.invert}
                     />
             </>;
 
@@ -383,7 +377,6 @@ class Camera_Align extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={this.state.x_icon}
                 alt="show X-axis camera align button"
-                dark={this.props.invert}
                 />            
 
         const x_align_button =
@@ -421,7 +414,6 @@ class Camera_Align extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={this.state.y_icon}
                 alt="show Y-axis camera align button"
-                dark={this.props.invert}
                 />
 
         const y_align_button =
@@ -457,7 +449,6 @@ class Camera_Align extends React.Component
                 style={TOP_BUTTON_STYLE}
                 image={this.state.z_icon}
                 alt="show Z-axis camera align button"
-                dark={this.props.invert}
                 />
     
         const z_align_button =
@@ -485,7 +476,7 @@ class Camera_Align extends React.Component
                     anchor={()=>{return (z_button)}} 
                     />
              </V_Tooltip> ;
-    
+
         return (
             <div className="center_controls">
                 <div className="camera_align_controls">
@@ -493,7 +484,7 @@ class Camera_Align extends React.Component
                     {y_align_button}
                     {z_align_button}
                 </div>
-                <div className='target_label'>
+                <div className={`target_label`}>
                     {label}
                 </div>
             </div>

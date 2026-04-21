@@ -3,6 +3,7 @@ import flatpickr from 'flatpickr'
 import './tipsod_flatpickr.css'
 import { V3DSpace } from './App.jsx'
 import { V_Button } from './UI.jsx'
+import { V_Checkbox } from './UI.jsx'
 
 import { ENT_type } from './entity_manager.js'
 //import { Space } from 'antd' 
@@ -290,10 +291,10 @@ class Ghost_SC_Selection extends React.Component
                                 return (
                                     <tr key={sc.id}>
                                         <td className='sc-selection-table-col1-wd'>
-                                            <input
-                                                type='checkbox'
+                                            <V_Checkbox
                                                 checked={this.props.selected.includes (sc.id)}
                                                 onChange={() => this.props.handle_change (sc.id)}
+                                                shade={this.props.invert}
                                             />
                                         </td>
                                         <td className='sc-selection-table-col2-wd'>
@@ -1271,6 +1272,7 @@ class Ghost_Single_Panel extends React.Component
                         single_panel={true}
                         sc_filter={this.props.sc_filter}
                         update_sc_filter={this.props.update_sc_filter}
+                        invert={this.props.invert}
                         />
                 </div> ;
 
@@ -1418,7 +1420,7 @@ class Ghost_Full_Screen extends React.Component
                         single_panel={false}
                         sc_filter={this.props.sc_filter}
                         update_sc_filter={this.props.update_sc_filter}
-
+                        invert={this.props.invert}
                         />
                 </div>
 
