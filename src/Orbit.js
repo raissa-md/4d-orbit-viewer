@@ -3,8 +3,9 @@ import * as THREE from "three"
 import { PLANET_ORBIT_INTERVAL } from './constants.js' 
 import { GEO } from "./App.jsx"
 import { HELIO } from "./App.jsx"
+import { SELENE } from "./App.jsx"
+import { Orbit_Data } from './App.jsx'
 
-    
 export const MSEC_PER_SEC  = 1000
 export const MSEC_PER_MIN  = 1000 * 60 ;
 export const MSEC_PER_HOUR = 1000 * 60 * 60 ;
@@ -1030,44 +1031,13 @@ export function Frame_to_DS_base (xyz)
     return GSE_to_WS_base (xyz)
     }
     
-export function GSE_to_DS (gse, time = 0, frame = REF_FRAME.ECI)
-    {
-    // DS is new designation for the THREE.js coordinate system
-    // This function replaces old functionality of GSE_to_WS but includes
-    // a frame conversion by including GSE_to_Frame
-    return Frame_to_DS (GSE_to_Frame (gse, time, frame))   
-    }
-
-export function GSE_to_Frame_base (gse, time, frame = REF_FRAME.ECI)
-    {
-    switch (frame)
-        {
-        case  REF_FRAME.ECI:
-
-            return gse
-
-        case  REF_FRAME.ECER:
-            // Get the GMST angle in radians
-            const theta = gmst (time)
-
-            // GMST @ midnight UTC
-            const theta_0 = gmst (midnight (time))
-
-            const earth_axis_angle = GEI_to_GSE ([0, 0, 1], Sun.get_sun_pos (time))
-
-            return rotate_around_origin (gse, earth_axis_angle, -(theta - theta_0))
-
-        default:
-            return 
-        }
-    }
-
 export const coord_unit =
     {
     RE: 1,
     AU: 2,
     KM: 3,
-    RS: 4, 
+    RS: 4,
+    KM3: 5, 
     UNKNOWN: 0,
     }
 
@@ -1090,6 +1060,10 @@ export class CONVERT_UNIT
             case COORD_Unit.KM :
 
                 return v / EARTH_RADIUS
+
+            case COORD_Unit.KM3 :
+
+                return (v * 1000) / EARTH_RADIUS
 
             case COORD_Unit.RS :
 
@@ -1117,9 +1091,47 @@ export class CONVERT_UNIT
 
                 return v
 
+            case COORD_Unit.KM3 :
+
+                return v * 1000
+
             case COORD_Unit.RS :
 
                 return v * SOLAR_RADIUS
+
+            default :
+
+                return v
+            }
+        }
+
+
+    // I didn't really need to do this.  I could have just converted to km and then to km3, 
+    // but I wanted to be consistent with the other conversion functions and include a 
+    // direct conversion from each unit to km3.
+    static To_KM3 (v, unit)
+        {
+        switch (unit)
+            {
+            case COORD_Unit.RE :
+
+                return v * (EARTH_RADIUS / 1000)
+
+            case COORD_Unit.AU :
+
+                return v * (AUKM / 1000)
+
+            case COORD_Unit.KM :
+
+                return v / 1000
+
+            case COORD_Unit.KM3 :
+
+                return v
+
+            case COORD_Unit.RS :
+
+                return v * (SOLAR_RADIUS / 1000)
 
             default :
 
@@ -1142,6 +1154,10 @@ export class CONVERT_UNIT
             case COORD_Unit.KM :
 
                 return v / SOLAR_RADIUS
+
+            case COORD_Unit.KM3 :
+
+                return (v * 1000) / SOLAR_RADIUS
 
             case COORD_Unit.RS :
 
@@ -1168,6 +1184,10 @@ export class CONVERT_UNIT
             case COORD_Unit.KM :
 
                 return v / AUKM
+
+            case COORD_Unit.KM3 :
+
+                return (v * 1000) / AUKM
 
             case COORD_Unit.RS :
 
@@ -1196,6 +1216,10 @@ export function convert (v, unit = COORD_Unit.RE, to = COORD_Unit.RE)
 
             return CONVERT_UNIT.To_KM (v, unit)
 
+        case COORD_Unit.KM3 :
+
+            return CONVERT_UNIT.To_KM3 (v, unit)
+
         case COORD_Unit.RS :
 
             return CONVERT_UNIT.To_RS (v, unit)
@@ -1216,6 +1240,96 @@ export const coord_formats =
 
 export const COORD_Format = Object.freeze (coord_formats)
 
+export const reference_frame =
+    {
+    UNKNOWN: 0,
+    EARTH: 1,
+    SUN: 2,
+    LUNAR: 3,
+    MARS: 4,
+    VENUS: 5,
+    L1: 6,
+    MERCURY: 7,
+    }
+
+export const REF_FRAME = Object.freeze (reference_frame)
+
+export function planet_to_ref_frame (id)
+    {
+    switch (id)
+        {
+        case "EARTH" :
+
+            return REF_FRAME.EARTH
+
+        case "SUN" :
+
+            return REF_FRAME.SUN
+
+        case "MOON" :
+
+            return REF_FRAME.LUNAR
+
+        case "MARS" :
+
+            return REF_FRAME.MARS
+
+        case "VENUS" :
+
+            return REF_FRAME.VENUS
+
+        case "L1" :
+
+            return REF_FRAME.L1
+
+        case "MERCURY" :
+
+            return REF_FRAME.MERCURY
+
+        default:
+
+            return REF_FRAME.UNKNOWN
+        }
+    }
+
+export function ref_frame_to_planet (frame) 
+    {
+    switch (frame)
+        {
+        case REF_FRAME.EARTH :
+
+            return "EARTH"
+
+        case REF_FRAME.SUN :
+
+            return "SUN"
+
+        case REF_FRAME.LUNAR :
+
+            return "MOON"
+
+        case REF_FRAME.MARS :
+
+            return "MARS"
+
+        case REF_FRAME.VENUS :
+
+            return "VENUS"
+
+        case REF_FRAME.L1 :
+
+            return "L1"
+
+        case REF_FRAME.MERCURY :
+
+            return "MERCURY"
+
+        default:
+
+            return null
+        }
+    }
+
 export const coord_system = 
     {
     UNKNOWN: 0,
@@ -1229,21 +1343,35 @@ export const coord_system =
     HEE: 8,
     HAE: 9,
     HEEQ: 10,
+    SSE: 11,
     }
 
 export const COORD_System = Object.freeze (coord_system)
 
 export const DEF_HELIO_COORD_SYS = COORD_System.HEE
 export const DEF_GEO_COORD_SYS = COORD_System.GSE
+export const DEF_LUNAR_COORD_SYS = COORD_System.SSE
 
-export const reference_frame = 
+export function get_default_coord_sys (frame)
     {
-    UNKNOWN: 0,
-    ECI: 1,
-    ECER: 2,
-    }
+    switch (frame)
+        {
+        case REF_FRAME.EARTH :
 
-export const REF_FRAME = Object.freeze (reference_frame)
+            return DEF_GEO_COORD_SYS
+
+        case REF_FRAME.SUN :
+
+            return DEF_HELIO_COORD_SYS
+
+        case REF_FRAME.LUNAR :
+
+            return DEF_LUNAR_COORD_SYS
+
+        default:
+            return null
+        }
+    }
 
 export function key_to_unit (key)
     {
@@ -1260,6 +1388,10 @@ export function key_to_unit (key)
         case "KM" :
 
             return COORD_Unit.KM
+
+        case "KM3" :
+
+            return COORD_Unit.KM3
 
         case "RS" :
 
@@ -1288,6 +1420,10 @@ export function unit_to_key (unit)
 
             return "Km"
 
+        case COORD_Unit.KM3 :
+
+            return "KM3" 
+
         case COORD_Unit.RS :
 
             return "Rs"
@@ -1314,6 +1450,10 @@ export function unit_to_string (unit)
 
             return "Kilometer (km)"
 
+        case COORD_Unit.KM3 :
+
+            return "1000 Kilometers (km^3)"
+
         case COORD_Unit.RS :
 
             return "Solar Radii (Rs = 6.96e5 km)"
@@ -1326,7 +1466,7 @@ export function unit_to_string (unit)
 
 export function get_default_unit (system)
     {
-        switch (system)
+    switch (system)
         {
         case COORD_System.GSE :
 
@@ -1367,6 +1507,10 @@ export function get_default_unit (system)
         case COORD_System.HEEQ :
 
             return COORD_Unit.RS
+
+        case COORD_System.SSE :
+
+            return COORD_Unit.KM3
 
         default:
 
@@ -1418,6 +1562,10 @@ export function key_to_coord_system (key)
 
             return COORD_System.HEEQ
 
+        case "SSE" :
+
+            return COORD_System.SSE
+
         default:
 
             return null
@@ -1468,6 +1616,10 @@ export function coord_system_to_key (system)
 
             return "HEEQ" 
 
+        case COORD_System.SSE :
+
+            return "SSE"
+
         default:
 
             return null
@@ -1480,43 +1632,47 @@ export function coord_system_to_frame (system)
         {
         case COORD_System.GSE :
 
-            return "EARTH"
+            return REF_FRAME.EARTH
 
         case COORD_System.GEI :
 
-            return "EARTH"
+            return REF_FRAME.EARTH
 
         case COORD_System.GEI2000 :
 
-            return "EARTH"
+            return REF_FRAME.EARTH
 
         case COORD_System.GEO :
 
-            return "EARTH"
+            return REF_FRAME.EARTH
 
         case COORD_System.GSM :
 
-            return "EARTH"
+            return REF_FRAME.EARTH
 
         case COORD_System.SM :
 
-            return "EARTH"
+            return REF_FRAME.EARTH
 
         case COORD_System.MAG :
 
-            return "EARTH" 
+            return REF_FRAME.EARTH 
 
         case COORD_System.HEE :
 
-            return "SUN" 
+            return REF_FRAME.SUN 
 
         case COORD_System.HAE :
 
-            return "SUN"
+            return REF_FRAME.SUN
 
         case COORD_System.HEEQ :
 
-            return "SUN" 
+            return REF_FRAME.SUN 
+
+        case COORD_System.SSE :
+
+            return REF_FRAME.LUNAR
 
         default:
 
@@ -1533,6 +1689,8 @@ export function coord_system_to_frame (system)
 export function transform_coordinates (transform, ...args)
     {
 
+    const t0 = performance.now ()    
+
     let work = null
     let input_type = COORD_Format.UNKNNOWN
 
@@ -1544,7 +1702,6 @@ export function transform_coordinates (transform, ...args)
     if  (typeof args [0] === 'object')
         {
         const obj = args [0]
-
 
         if  (obj.isVector3 === true)
             {
@@ -1637,6 +1794,10 @@ export function transform_coordinates (transform, ...args)
         work.splice (first, 3, ...transform.apply (undefined, p))
         }
 
+    const t1 = performance.now ()
+
+    // console.log (`transform_coordinates took ${t1 - t0} ms to transform ${len} coordinate tuples`)
+
     switch (input_type)
         {
         case COORD_Format.VECTOR3:
@@ -1674,13 +1835,19 @@ export function ANY_to_GSE (any, system = COORD_System.UNKNOWN, time)
         return any
         }
 
-
     const sunpos = sun_position (time)
 
     let gei = null
 
     switch (system)
         {
+        // Seleneocentric coordinate systems.  These coordinate systems do not resolve to GEI
+        // but are transformed into GSE directly.
+        case COORD_System.SSE :
+            {
+            return SSE_to_GSE (any, sunpos, time)
+            }
+
         // Heliocentric coordinate systems.  These coordinate systems do not resolve to GEI
         // but are transformed into GSE directly.
         case COORD_System.HEE :
@@ -1756,6 +1923,10 @@ export function GSE_to_ANY (gse, system = COORD_System.UNKNOWN, time)
         return HEE_to_HAE (GSE_to_HEE (gse, sunpos), sunpos)
         }
 
+    if  (system === COORD_System.SSE)
+        {
+        return GSE_to_SSE (gse, sunpos, time)
+        }
 
     const gei = GSE_to_GEI (gse, sunpos)
 
@@ -1887,6 +2058,16 @@ export function HEE_to_HAE (...args)
     return transform_coordinates (HELIO.HEE_to_HAE, ...args)
     }
 
+export function GSE_to_SSE (...args)
+    {
+    return transform_coordinates (SELENE.GSE_to_SSE, ...args)
+    }
+
+export function SSE_to_GSE (...args)
+    {
+    return transform_coordinates (SELENE.SSE_to_GSE, ...args)
+    }   
+
 //export function GSE_to_WS (x, y, z, normalize = 0)
 export function GSE_to_WS (...args)
     {
@@ -1896,11 +2077,6 @@ export function GSE_to_WS (...args)
 export function Frame_to_DS (...args)
     {
     return transform_coordinates (Frame_to_DS_base, ...args)
-    }
-
-export function GSE_to_Frame (...args)
-    {
-    return transform_coordinates (GSE_to_Frame_base, ...args) 
     }
 
 /* No longer used.

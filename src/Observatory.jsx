@@ -35,6 +35,11 @@ import { ENT_type } from './entity_manager.js'
 import { COORD_System } from './Orbit.js'
 import { key_to_coord_system } from './Orbit.js'
 import { coord_system_to_key } from './Orbit.js'
+import { coord_system_to_frame } from './Orbit.js'
+import { planet_to_ref_frame } from './Orbit.js'
+import { ref_frame_to_planet } from './Orbit.js'
+import { get_default_coord_sys } from './Orbit.js'
+
 import { unit_to_string } from './Orbit.js'
 import { ALERT } from './message_box.jsx'
 
@@ -61,6 +66,7 @@ import { V3DSpace } from './App.jsx'
 import { Orbit_Data } from './App.jsx'
 import Ghost_Menu from './ghost_selection.jsx'
 import { SELECT_TYPE } from './ghost_selection.jsx'
+// Imports end here.
 
 function use_min_width (disp_width)
     {
@@ -1719,21 +1725,10 @@ class Coordinate_System_Select extends React.Component
 
         this.state = {
            req_coord_system: this.props.system,
-           // ref_frame: this.props.current_ref_frame 
            } ;
 
         this.local_update = this.local_update.bind (this)
-        // this.select_rotating_ref_frame = this.select_rotating_ref_frame.bind (this)
         }
-
-    /*
-    select_rotating_ref_frame (e)
-        {
-        this.setState ({ref_frame: e.target.checked})
-
-        this.props.update_ref_frame (e)
-        }
-    */
 
     local_update (name, index, checked)
         {
@@ -1744,25 +1739,6 @@ class Coordinate_System_Select extends React.Component
 
     render ()
         {
-            /* Saved in case I want to use it later...
-                <div className="op-horizontal-line"></div>
-                <div className="op_row">
-                    <div className="op_checkbox">
-                        <Checkbox 
-                            name="ER_frame" 
-                            checked={this.state.ref_frame} 
-                            onChange={this.select_rotating_ref_frame}>
-                        </Checkbox>
-                    </div>
-                    <div className="op-text op_label" >
-                        
-                    </div>
-                    <div className="op-text-light" >
-                        Use Earth Centered / Earth rotating reference frame
-                    </div>
-                </div>
-            */
-
 
         return (
             <div className='grid' style={{gap: '.5em'}}>
@@ -1885,7 +1861,25 @@ class Coordinate_System_Select extends React.Component
                         Heliocentric Earth Ecliptic
                     </div>   
                 </div>
-           </div>
+                <div className="op-horizontal-line"></div>
+                <div className='grid-row grid-col-center op-text-subtitle'>
+                    Selenocentric Coordinate System
+                </div>
+                <div className='grid-row op-text'>
+                    <div className="op_checkbox">
+                        <V_Checkbox
+                            label="SSE"
+                            name="sse"
+                            offset=".2em"
+                            checked={this.state.req_coord_system === COORD_System.SSE}
+                            onChange={this.local_update}
+                            />
+                    </div>
+                    <div className="op-text-light" >
+                        Selenocentric Solar Ecliptic
+                    </div>   
+                </div>
+            </div>
             ) ;
         }
     }
@@ -2393,7 +2387,6 @@ class Base_Layout extends React.Component
         this.save_selected_orbits=this.save_selected_orbits.bind (this) ;
         this.save_image=this.save_image.bind (this) ;
         this.update_save_target=this.update_save_target.bind (this) 
-        this.update_coord_system = this.update_coord_system.bind (this)
         this.update_img_save_target=this.update_img_save_target.bind (this)
         this.update_log_save_target=this.update_log_save_target.bind (this)
         this.update_axes_length =this.update_axes_length.bind (this) ;
@@ -2405,6 +2398,7 @@ class Base_Layout extends React.Component
         this.update_save_file_name=this.update_save_file_name.bind (this)
         this.update_img_save_file_name=this.update_img_save_file_name.bind (this)
         this.update_log_save_file_name=this.update_log_save_file_name.bind (this)
+        this.update_coord_system = this.update_coord_system.bind (this)
         this.save_or_display_log=this.save_or_display_log.bind (this)
         this.toggle_show_sc_position=this.toggle_show_sc_position.bind (this) ;
         this.set_xz_grid_options=this.set_xz_grid_options.bind (this) ;
@@ -2885,38 +2879,10 @@ class Base_Layout extends React.Component
 
     open_coord_dialog ()
         {
-        /*
-        this.setState({show_coord_dialog: true})
-
-        <Modal
-            title={'Select A Coordinate System'}
-            icon={null}
-            centered={true}
-            width={opt_dlg_width (dx)}
-            style={get_dlg_style (dx, opt_dlg_width)}
-            open={this.state.show_coord_dialog}
-            onCancel={this.close_coord_dialog}
-            footer={[
-                <Button type="primary" onClick={this.close_coord_dialog}>
-                    Done
-                </Button>,
-                ]}
-            >
-            <Coordinate_System_Select
-                update={this.update_coord_system}
-                system={V3DSpace.coord_system}
-                current_ref_frame={V3DSpace.reference_frame === REF_FRAME.ECER}
-                update_ref_frame={this.update_reference_frame}
-                />
-        </Modal>
-        */
-
         const payload = 
             <Coordinate_System_Select
                 update={this.update_coord_system}
                 system={V3DSpace.coord_system}
-                // current_ref_frame={V3DSpace.reference_frame === REF_FRAME.ECER}
-                // update_ref_frame={this.update_reference_frame}
                 /> ;
         
         
@@ -3031,25 +2997,14 @@ class Base_Layout extends React.Component
 
     update_coord_system (name, index, checked)
         {
-        V3DSpace.set_coord_system (key_to_coord_system (name))
-        this.props.update_coord_system ()
+        const key = key_to_coord_system (name)
+
+        V3DSpace.set_coord_system (key)
+
+        const ref_frame = coord_system_to_frame (key)
+
+        this.props.set_field_boundaries (ref_frame !== REF_FRAME.EARTH)
         }
-
-
-    /* Not needed anymore.
-    update_reference_frame (e)
-        {
-        if  (e.target.checked)
-            {
-            V3DSpace.set_reference_frame (REF_FRAME.ECER)
-            }
-
-        else 
-            {
-            V3DSpace.set_reference_frame (REF_FRAME.ECI)
-            }
-        }
-    */
 
     save_selected_orbits ()
         {
@@ -3321,13 +3276,13 @@ class Base_Layout extends React.Component
                     start_time={this.props.start_time}
                     end_time={this.props.end_time}
                     set_frame={this.props.set_frame}
-                    target={this.props.target}
                     update_master_time={this.props.update_master_time}
                     transport_bar_help={this.display_transport_bar_help_dialog}
                     time={this.props.time}
                     axes_length={this.state.axes_length * Number (! this.state.dark_screen)}
                     hide_time_control={this.state.hide_time_control}
                     block_transport_bar={this.state.dark_screen}
+                    disable_field_boundaries={this.props.disable_field_boundaries}
                     show_sc_position={this.state.show_sc_position && ! this.state.dark_screen}
                     msg={this.props.msg}
                     ui={this.ui}
@@ -3338,7 +3293,6 @@ class Base_Layout extends React.Component
                     open_image_save_menu={this.open_image_save_menu}
                     open_option_menu={this.open_option_menu}
                     open_coord_dialog={this.open_coord_dialog}
-                    coord_system={this.props.coord_system}
                     />
                 <div>
                     {this.state.dialog_box} 
@@ -3398,8 +3352,9 @@ class Manager extends React.Component
             orbit_recolor_key: null,
             show_color_dialog: false,
             display_properties: null,
-            target: V3DSpace.target_label,
-            coord_system: coord_system_to_key (V3DSpace.coord_system),
+            disable_field_boundaries: false,
+            reference_frame: REF_FRAME.EARTH,
+            // coord_system: coord_system_to_key (V3DSpace.coord_system),
             //request: [],
             //orbits: null,
             }
@@ -3410,6 +3365,7 @@ class Manager extends React.Component
         //this.update_selection = this.update_selection.bind (this)
         this.update_view_start_time = this.update_view_start_time.bind (this)
         this.update_view_end_time   = this.update_view_end_time.bind (this)
+        this.set_field_boundaries = this.set_field_boundaries.bind (this)
         //this.add_orbit = this.add_orbit.bind (this)
         //this.remove_orbit = this.remove_orbit.bind (this)
         this.get_new_color = this.get_new_color.bind (this)
@@ -3420,7 +3376,6 @@ class Manager extends React.Component
         this.handle_keypress = this.handle_keypress.bind (this)
         this.update_master_time = this.update_master_time.bind (this)
         this.set_properties = this.set_properties.bind (this) 
-        this.update_coord_system = this.update_coord_system.bind (this)
         this.render = this.render.bind (this)
 
         this.message = React.createRef() 
@@ -3631,17 +3586,38 @@ class Manager extends React.Component
         this.setState ({relative_orbits: (this.state.relative_orbits === false)? true : false,}) ;
         }
        
-    set_frame (frame="EARTH")
+    set_frame (planet="EARTH")
         {
-        const msg = V3DSpace.update_frame (frame, this.state.relative_orbits)
+        // This function takes a planet ID as input (maybe I should change that?)
+        // First convert it to a reference frame.
+        const frame = planet_to_ref_frame (planet)
+
+        // Do I need to check if the frame is different than the current frame before I update it?
+        // I don't think I will ever call this on the same frame.
+
+        // Check if the reference frame has a default coordinate system.  
+        // If it does, set the coordinate system to that.    
+     
+        const msg = V3DSpace.reset_camera_pos (frame, this.state.relative_orbits)
 
         if  (msg)
             {    
             V3DSpace.entity_manager.msg_portal.add_alert (ALERT.custom, msg, 7)     
             } 
 
-        this.setState ({target: V3DSpace.target_label})
-        this.update_coord_system ()
+        // This should really be based on the return value of reset_camera_pos, 
+        // but it is returning a message string instead of a boolean, 
+        // so for now I will just check if the frame is earth or not. 
+        const disable = (coord_system_to_frame (V3DSpace.coord_system) !== REF_FRAME.EARTH)? true : false
+
+        this.set_field_boundaries(disable)  
+        }
+
+
+    set_field_boundaries (disable = false)
+        {
+        V3DSpace.disable_field_boundaries (disable)
+        this.setState ({disable_field_boundaries: disable})
         }
 
     handle_OK ()
@@ -3742,11 +3718,11 @@ class Manager extends React.Component
         switch ( e.keyCode ) 
             {
             case ESCAPE_KEY:
-                this.setState ({target: V3DSpace.clear_focus ()})
-                break;
+                V3DSpace.clear_focus ()
+                break
 
             default: 
-                break;
+                break
             }        
         }
 
@@ -3768,10 +3744,12 @@ class Manager extends React.Component
         this.setState ({time: new_time}) ;
         }
 
+    /*
     update_coord_system ()
         {
         this.setState ({coord_system: coord_system_to_key (V3DSpace.coord_system)})
         }
+    */
 
     componentDidMount ()
         {
@@ -3847,15 +3825,14 @@ class Manager extends React.Component
                             get_new_color={this.get_new_color}
                             get_new_shape={this.get_new_shape}
                             set_frame={this.set_frame}
-                            target={this.state.target}
                             time={this.state.time}
                             update_master_time={this.update_master_time}
                             msg={this.message}
                             request={this.default_request}
                             toggle_relative_orbits={this.toggle_relative_orbits}
+                            disable_field_boundaries={this.state.disable_field_boundaries}
                             relative_orbits={this.state.relative_orbits}
-                            coord_system={this.state.coord_system}
-                            update_coord_system={this.update_coord_system}
+                            set_field_boundaries={this.set_field_boundaries}    
                             />
 
                         : null

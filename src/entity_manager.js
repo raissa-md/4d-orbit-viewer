@@ -14,15 +14,17 @@ import { ORTHO_TARGET_DIST } from './constants.js'
 import terminator_diffuse from './images/terminator_line.png'
 
 //import {Lat_Lon_to_XYZ} from './geo_orbit.js'
-import {ρϕλ_2_xyz} from './Orbit.js'
+import {get_default_coord_sys, ρϕλ_2_xyz} from './Orbit.js'
 import {sph2rect} from './Orbit.js'
 import { DEG2RD, GSE_to_ANY } from './Orbit.js'
 import { COORD_System } from './Orbit.js'
 import { coord_system_to_key } from './Orbit.js'
+import { ref_frame_to_planet } from './Orbit.js'
+import { coord_system_to_frame } from './Orbit.js'
+import { get_default_unit } from './Orbit.js';
 import { REF_FRAME } from './Orbit.js'
 import { GSE_to_WS } from './Orbit.js'
 import { Frame_to_DS } from './Orbit.js'
-import { GSE_to_Frame } from './Orbit.js'
 import { xyz } from './Orbit.js'
 // import { Calculate_Planet_Orbit } from './Orbit.js'
 //import { EARTH_RADIUS } from './Orbit.js'
@@ -254,7 +256,6 @@ export class entity
         this._orbit = []
         this._time = []
         this._decimate = [] // indexes required for simplified version of the orbit
-        // this._orbit_ref_frame = REF_FRAME.ECI
         this._coord_system = COORD_System.GEI
         this._coord_center = null
 
@@ -328,33 +329,6 @@ export class entity
         return r
         }
 
-    /* No longer used.
-    orbit_to_WS (index, frame = this._orbit_ref_frame)
-        {
-        const gse = xyz (this._orbit [index])
-        const t = this._time [index]
-
-        return GSE_to_WS (GSE_to_Frame (gse, t, frame))
-        }
-    */
-
-    /* No longer used.
-    set_frame (frame = REF_FRAME.ECI)
-        {
-        if  (this._orbit_ref_frame !== frame)
-            {
-            this._orbit_ref_frame = frame
-
-            // If the object hasn't been instanced yet, then don't do anything.
-            if  (this._time.length > 0)
-                {
-                // Update spacecraft position to current time 
-                this.update_position (this._now)
-                }
-            }
-        }
-    */
-
     set_coord_center (center = null)
         {
         if  (this._coord_center !== center)
@@ -410,7 +384,6 @@ export class entity
         }
 
     calc_position (time, use_interpolation=false, center = this._coord_center)
-    // update_position (time, use_interpolation=false, frame = this._orbit_ref_frame)
         {
         //use_interpolation = false
         // Not sure what to return on invalid data.
@@ -477,87 +450,11 @@ export class entity
             pos  = Orbit_Data.get_relative_pos (this._id, this._now, center, f_interpolate)
             }
 
-        /* Old version of orbit position calculation.
-        // time within range covered by orbital data.  Calculate!
-        else                                   
-            {
-            for (let i = 1  ; i < this._time.length ; i++)
-                {
-                if  (time < this._time [i]) 
-                    {
-                    p_0 = i - 1 
-                    p_1 = i 
-
-                    break 
-                    }
-                }
-
-            t0 = this._time [p_0]
-            t1 = this._time [p_1]
-
-            //this._index = ((time - this._time [p_0]) < (this._time [p_1] - time))? p_0 : p_1 
-            this._index = ((time - t0) < (t1 - time))? p_0 : p_1 
-
-            // Set end of track or beginning of track flags as needed
-            this._at_end = (this._index === this._time.length - 1) ? true : false 
-            this._at_start = (this._index === 0)? true : false
-            }
-
-        if  (f_interpolate)
-            {
-            // The interval between closest and p1 should bracket the position of the s/c at time.
-            const alpha = (time - t0) / (t1 - t0) 
-            // const v0 = new THREE.Vector3().fromArray (this._points, p_0 * 3) 
-            // const v0 = GSE_to_WS (this.V3_from_orbit (p_0))
-            // const v0 = GSE_to_WS (GSE_to_Frame (this.V3_from_orbit (p_0)), t0, this._orbit_ref_frame)
-            
-            //const v0 = new THREE.Vector3().fromArray (this.orbit_to_WS (p_0, frame))
-            //const v0 = new THREE.Vector3().fromArray (this.orbit_to_DS (p_0, system))
-
-            // Set pos to object postion at t0. 
-            // This is position that will be returned and also be used for interpolation.
-            pos.fromArray (xyz (this._orbit [p_0]))
-            
-            // const v1 = new THREE.Vector3().fromArray (this._points, p_1 * 3) 
-            // const v1 = GSE_to_WS (this.V3_from_orbit (p_1))
-            // const v1 = GSE_to_WS (GSE_to_Frame (this.V3_from_orbit (p_1)), t1, this._orbit_ref_frame)
-            
-            //const v1 = new THREE.Vector3().fromArray (this.orbit_to_WS (p_1, frame))
-            //const v1 = new THREE.Vector3().fromArray (this.orbit_to_DS (p_1, system))
-
-            // Interpolate between the two positions at t0 and t1 to get the position at
-            // the requested time.
-            pos.lerp (new THREE.Vector3 ().fromArray (xyz (this._orbit [p_1])), alpha)
-
-            //this._obj.position.lerpVectors (v0, v1, alpha) 
-            }
-
-        else
-            {
-            // console.log (this._index)
-            // this._obj.position.fromArray (GSE_to_WS (xyz (this._orbit [this._index])))
-            
-            //this._obj.position.fromArray (this.orbit_to_WS (this._index, frame))
-            //this._obj.position.fromArray (this.orbit_to_DS (this._index, system))
-            
-            //this._obj.position.set (this._orbit [this._index].x, 
-            //                        this._orbit [this._index].y, 
-            //                        this._orbit [this._index].z)
-
-            // Set pos to object postion at t0. 
-            pos.fromArray (xyz (this._orbit [this._index]))
- 
-            }
-
         if  (this._id === 'MOON')
             {
             //console.log (this._obj.position.toArray ())
             }
  
-        // Return the current orbit time for use by the planetary rotation method
-        // return this._now
-    `  */
-
         // Return the current position vector in GSE coordinates.
         return pos
         }
@@ -1173,13 +1070,14 @@ class planet extends entity
 
     update_position (time)
         {
+        
         if  (! this.data_valid ())
             {
             console.warn ("Orbit data not valid for ", this._id)
 
             return
             }
-            
+
         super.update_position (time, true)
 
         this.rotate (this._now)
@@ -1539,24 +1437,6 @@ class spacecraft extends entity
         this.orient_spacecraft ()
         }
 
-    /*
-    add_orbit_pos (time, x, y, z)
-        {
-        // add the time
-        this._time.push (time)
-
-        // add the GSE coordinate position
-        this._coord.push (x, y, z)
-
-        // convert to WS
-        const ws = GSE_to_WS_base (x, y, z, true)
-
-        // add the WS coordinate position
-        this._points.push (ws.x, ws.y, ws.z)
-        }
-    */
-
-    // orient_spacecraft (frame = this._orbit_ref_frame)
     orient_spacecraft (center = this._coord_center, system = this._coord_system)
         {
         // Point shape in direction of orbit, but only if it is not a sphere.
@@ -1624,18 +1504,25 @@ class spacecraft extends entity
             // Stash the orbit data somewhere
             this.dispose_orbit (true)
 
+            console.log ("old orbit removed.")
+
             this.create_orbit ()
+
+            console.log ("new orbit created.")
 
             this.create_direction_indicator ()
 
+            console.log ("direction indicator created.")    
+
             // Update spacecraft position to current time 
             this.update_position (this._now)
+
+            console.log ("s/c position updated.")
 
             super.deploy ()
             }) ;
         }
 
-    // create_orbit (frame = this._orbit_ref_frame)
     create_orbit (center = this._coord_center, system = this._coord_system)
         {
         // Probably best not to do this until a better decimation routine is developed
@@ -1682,7 +1569,6 @@ class spacecraft extends entity
             // console.log ("slice parameters: ", start, stop, start * 3, stop * 3)
 
             // Add in the geometry for the line
-            // line.setPoints (GSE_to_WS (GSE_to_Frame (this.orbit_as_single_array (true), this._time, frame)))
             //line.setPoints (Frame_to_DS (GSE_to_ANY (this.orbit_as_single_array (true), system, this._time)))
             // line.setPoints (Frame_to_DS (GSE_to_ANY (this.orbit_as_single_array (true), system, this._time)))
             line.setPoints (Frame_to_DS (GSE_to_ANY (orbit_slice, system, time_slice))) // need to update this?
@@ -1713,7 +1599,6 @@ class spacecraft extends entity
         }
 
     create_direction_indicator (center = this._coord_center, system = this._coord_system)
-    // create_direction_indicator (frame = REF_FRAME.ECI)
         {
         const cone = new THREE.ConeGeometry (0.04, .10, 16)
 
@@ -1843,28 +1728,6 @@ class spacecraft extends entity
         return true 
         }
 
-    /* No longer used.
-    set_frame (frame = REF_FRAME.ECI)
-        {
-        if  (this._orbit_ref_frame !== frame)
-            {
-            // Recreate the orbit and orbit indicator
-            if  (this._time.length !== 0)
-                {
-                // Remove the orbit and orbit indicator
-                this.dispose_orbit (true)
-
-                // Create the new orbit
-                this.create_orbit (frame)
-
-                this.create_direction_indicator (frame)    
-                }
-
-            super.set_frame (frame)
-            }
-        }
-    */
-
     recreate_orbit (center = this._coord_center, system = this._coord_system)
         {
         // Recreate the orbit and orbit indicator  
@@ -1989,9 +1852,10 @@ export class entity_manager
         //this._planet_orbit =
         this._coord_system = COORD_System.GSE
         this._coord_center = null
-        this._reference_frame = REF_FRAME.ECI
+        this._reference_frame = REF_FRAME.EARTH
         this._unit = COORD_Unit.RE
-        // this._reference_frame = REF_FRAME.ECER
+
+        // Create a custom even to alert relevant modules that coordinate unit has been updated.  
 
 
         this.orbit_direction_material = new THREE.MeshBasicMaterial ()
@@ -1999,12 +1863,12 @@ export class entity_manager
         this.update_actor = this.update_actor.bind (this)
         }
 
+
     add (actor)
         {        
         actor.set_scene_reference (this.scene)
         actor.set_display (this.x_disp, this.y_disp)
         actor.set_time (system_time.time)
-        //actor.set_frame (this._reference_frame)
         actor.set_coord_system (this._coord_system)
         actor.set_coord_center (this._coord_center)
         actor.set_label_color (this.text_color)
@@ -2193,7 +2057,43 @@ export class entity_manager
             }
         }
 
-    set_coord_center (center = null)
+    set_reference_frame (frame = REF_FRAME.EARTH, update_coord_sys = true, force = false)
+        {
+        // Returns true if the coordinate system was updated, false if not.  
+
+        if  (this._reference_frame !== frame || force)
+            {
+            console.log ("Setting reference frame to: ", ref_frame_to_planet (frame))
+
+            this._reference_frame = frame
+
+            // Check if the requested reference frame has a corresponding coordinate system, and if so
+            // update the coordinate system to match the new reference frame.  
+            const def_coord_sys = get_default_coord_sys (frame)
+
+            if  (def_coord_sys)
+                {
+                // I am not sure invalid_coord_system is the right name for this variable, 
+                // it just means that the central object of the current coordinate system
+                // is different from that of the reference frame.  
+                const invalid_coord_system = (frame !== coord_system_to_frame (this._coord_system) ) 
+
+                if  (update_coord_sys && invalid_coord_system)
+                    {
+                    this.set_coord_system (def_coord_sys)       
+                    }
+
+                // This is necessary so that the caller can differentiate between frames that
+                // have a corresponding coordinate system and those that don't without having
+                // to repeat this check. 
+                return true
+                }   
+            }
+
+        return false
+        }
+
+     set_coord_center (center = null)
         {
         if  (this._coord_center !== center)
             {
@@ -2202,11 +2102,25 @@ export class entity_manager
             this.list.forEach (actor => actor.set_coord_center (center))
 
             this._coord_center = center
+
+            const event = new CustomEvent ("cntr_change_evt",
+                            {
+                            bubbles: true,
+                            detail: {
+                                system: this._coord_system,
+                                time: system_time.time,
+                                unit: this._unit,  
+                                center: this._coord_center, 
+                                }
+                            })
+
+            document.dispatchEvent (event)
+
             }
         }
 
 
-    set_coord_system (system = COORD_System.GSE)
+    set_coord_system (system = COORD_System.GSE, update_unit = true)
         {       
         if  (this._coord_system !== system)
             {
@@ -2216,10 +2130,56 @@ export class entity_manager
 
             this._coord_system = system
 
-            this.update_sc_pos_list (this._coord_system)
+            if  (update_unit)
+                {
+                const new_unit = get_default_unit (system)
+
+                this.set_unit (new_unit)
+                }
+
+            else
+                {
+                // We have update the sc position list here if we don't call set_unit, 
+                // because set_unit also calls update_sc_pos_list.
+                this.update_sc_pos_list (this._coord_system)
+                }
+
+            const event = new CustomEvent ("coord_change_evt",
+                            {
+                            bubbles: true,
+                            detail: { 
+                                system: this._coord_system,
+                                time: system_time.time,
+                                unit: this._unit, 
+                                center: this._coord_center, 
+                                }
+                            })  
+            document.dispatchEvent (event)
             }
 
         return this._coord_system
+        }
+
+    set_unit (unit = COORD_Unit.RE)
+        {
+        if  (this._unit !== unit)
+            {
+            this._unit = unit
+
+            console.log ("setting unit: ", unit)    
+
+            this.update_sc_pos_list (this._coord_system)
+
+            const event = new CustomEvent ("unit_change_evt", 
+                            {
+                            bubbles: true,
+                            detail: { unit: this._unit, system: this._coord_system, }
+                            })
+
+            document.dispatchEvent (event)
+            }
+
+        return this._unit
         }
 
     set_end_time (t=0)
@@ -2233,18 +2193,6 @@ export class entity_manager
             this.time_range_update = true
             }
         }
-
-    /* No longer used.
-    set_reference_frame (frame = REF_FRAME.ECI)
-        {
-        if  (this._reference_frame !== frame)
-            {
-            this.list.forEach (actor => actor.set_frame (frame))
-
-            this._reference_frame = frame
-            }
-        }
-    */
 
     async update_actor (actor)
         {
@@ -2479,12 +2427,6 @@ export class entity_manager
         return null
         }
 
-    set_unit (unit = COORD_Unit.RE)
-        {
-        this._unit = unit
-        this.update_sc_pos_list (this._coord_system)
-        }
-
     set_shape  (id, ...args)
         {
         if  (this.valid (id))
@@ -2636,6 +2578,11 @@ export class entity_manager
         return this._coord_system
         }
 
+    get reference_frame ()
+        {
+        return this._reference_frame
+        }   
+
     get coord_center ()
         {
         // Return null if the center is the origin, otherwise return the center.
@@ -2650,11 +2597,6 @@ export class entity_manager
     get msg_portal ()
         {
         return this._msg_portal
-        }
-
-    get reference_frame ()
-        {
-        return this._reference_frame
         }
 
     get terminator_line ()

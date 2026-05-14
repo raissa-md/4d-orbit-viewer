@@ -1,6 +1,5 @@
 import * as THREE from "three"
 
-import { COORD_System, GSE_to_Frame } from './Orbit.js'
 import { sun_position } from './Orbit.js'
 import { GEI_to_GSE } from './Orbit.js'
 import { ANY_to_GSE } from "./Orbit.js"
@@ -221,6 +220,7 @@ export class Terra
         this.scene.add (this.axes)
         }
 
+    /*
     update_axes (time, system = COORD_System.GSE, frame = REF_FRAME.ECI)
         {
         // This should be called with each time update.
@@ -228,8 +228,6 @@ export class Terra
 
         // const gse = ANY_to_GSE (target, system, time)
 
-        // const gse_frame = GSE_to_Frame (gse, time, frame)
- 
         const ws = GSE_to_WS (target)
         // const ws = GSE_to_WS (gse_frame)
         //const ws = gse_frame
@@ -248,12 +246,12 @@ export class Terra
         this.set_tick_mark_positions (this.y_axis_tick_marks, this.y_axis_tick_pos, time, system, frame)
         this.set_tick_mark_positions (this.z_axis_tick_marks, this.z_axis_tick_pos, time, system, frame)
         }
+    */
 
+    /*
     set_tick_mark_positions (marks, pos, time, system= COORD_System.GSE, frame = REF_FRAME.ECI)
         {
         // const gse = ANY_to_GSE (pos, system, time)
-
-        // const gse_frame = GSE_to_Frame (gse, time, frame)
 
         //const ws = GSE_to_WS (gse_frame)
         //const ws = gse_frame
@@ -264,6 +262,7 @@ export class Terra
             marks [i].position.fromArray (ws, i * 3)
             }
         }
+    */
 
     remove_axis_tick_marks (a)
         {
@@ -455,6 +454,7 @@ export class Terra
         station.rotateX (-90 * DEG2RD) ; 
         }
 
+    /*
     set_earth_rotation (time = 0, frame = REF_FRAME.ECI, system = COORD_System.GSE)
         {
         // Location of the point (90 ϕ, 0 λ) in world space coordinates on the unrotated Earth.  
@@ -504,9 +504,8 @@ export class Terra
         // this._marker.position.copy (target_x).multiplyScalar (1.3)
 
         // Old earth orientation code using object lookat.
-        /*
         //  set the proper inclination and rotation of the Earth.
-        const sunpos = sun_position (time) ;
+        //  const sunpos = sun_position (time) ;
 
         // convert longitude 0 / lattitude 90 to spherical coordinates.  
         //const gei = sph2rect (new THREE.Vector3 (0.0, 90.0, 1.0)) 
@@ -514,26 +513,26 @@ export class Terra
  
         //const ws  = GSE_to_WS (gse) ;
  
-        const gse = GEI_to_GSE ([0, 0, 1], sunpos) ;
-        const ws  = new THREE.Vector3 ().fromArray (GSE_to_WS (gse))
+        // const gse = GEI_to_GSE ([0, 0, 1], sunpos) ;
+        // const ws  = new THREE.Vector3 ().fromArray (GSE_to_WS (gse))
  
  
-        this.earth.lookAt (ws) ;
+        //this.earth.lookAt (ws) ;
         //this.earth.rotateX (90 * DEG2RD) ;
  
         // Don't rotate the earth in ECER
-        if  (frame === REF_FRAME.ECER)
-            {
-            this.earth.rotateZ (gmst (midnight (time)))
-            }
+        //if  (frame === REF_FRAME.ECER)
+        //    {
+        //    this.earth.rotateZ (gmst (midnight (time)))
+        //    }
  
-        else 
-            {
-            this.earth.rotateZ (gmst (time))
-            }
-        */
+        //else 
+        //    {
+        //    this.earth.rotateZ (gmst (time))
+        //    }
         
         }
+    */
     }
 
     export default Terra

@@ -24,7 +24,8 @@ import J2000_coord_icon from './images/J2000_coord_sys.png'
 import GSE_coord_icon from './images/GSE_coord_sys.png'
 import HEE_coord_icon from './images/HEE_coord_sys.png'
 import HAE_coord_icon from './images/HAE_coord_sys.png'
-
+import SSE_coord_icon from './images/SSE_coord_sys.png'
+import { coord_system_to_key } from './Orbit.js'
 
 import { TOP_BUTTON_STYLE } from './constants.js'
 import { SPDF_BUTTON_STYLE } from './constants.js'
@@ -59,8 +60,14 @@ class Icon_Bar extends React.Component
             hover_b: false,
             media_tooltip: MEDIA_TOOLTIP_STR [0],
             menu_open: false,            // True when the context menu is open
+            coord_system: coord_system_to_key (V3DSpace.coord_system),
             screen: null,
             }
+
+
+        document.addEventListener ("coord_change_evt", e => {
+            this.setState ({ coord_system: coord_system_to_key (e.detail.system) })
+            })
 
 
         this.get_coord_sys_icon = this.get_coord_sys_icon.bind (this)
@@ -77,7 +84,9 @@ class Icon_Bar extends React.Component
 
     get_coord_sys_icon ()
         {
-        switch (this.props.coord_system.toUpperCase())
+        // Really just need to modify this to with the COORD_System enum instead
+        // of the string keys, but this is fine for now.
+        switch (this.state.coord_system)
             {
                 case "GSE" :
 
@@ -118,6 +127,10 @@ class Icon_Bar extends React.Component
             case "HEEQ" :
     
                 return null
+
+            case "SSE" :
+
+                return SSE_coord_icon
 
             default:
 

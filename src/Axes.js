@@ -6,7 +6,6 @@ import { sun_position } from './Orbit.js'
 import { GEI_to_GSE } from './Orbit.js'
 import { ANY_to_GSE } from "./Orbit.js"
 import { GSE_to_ANY } from "./Orbit.js"
-import { Frame_to_DS } from "./Orbit.js"
 import { DEG2RD } from "./Orbit.js"
 import { midnight } from "./Orbit.js"
 import { RD2DEG } from "./Orbit.js"
@@ -17,7 +16,6 @@ import { convert } from "./Orbit.js"
 import { AXIS_X, AXIS_Y, AXIS_Z } from './Orbit_Display'
 
 import { GSE_to_WS, sph2rect } from './Orbit.js'
-import { REF_FRAME } from "./Orbit.js"
 
 export class Axes
     {
@@ -67,6 +65,11 @@ export class Axes
 
         this.update_axes_length (axes_length)
         
+        document.addEventListener ("unit_change_evt", e => {
+            this.set_coord_units (e.detail.unit)
+            this.update_axes ()
+            })
+
         this.update_axes_length = this.update_axes_length.bind (this)
         this.create_end_markers = this.create_end_markers.bind (this)
         this.create_axes = this.create_axes.bind (this)
@@ -206,7 +209,6 @@ export class Axes
         {
         // const gse = ANY_to_GSE (pos, system, time)
 
-        // const gse_frame = GSE_to_Frame (gse, time, frame)
         const gse = pos.map (x => x * this.ratio )
 
         const ws = GSE_to_WS (gse)
