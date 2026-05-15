@@ -824,7 +824,7 @@ class display_space
         this._ortho_camera.updateProjectionMatrix ()
         }
 
-    target (distance, direction)
+    target (distance, direction, target_pos = new THREE.Vector3 (0, 0, 0))
         {
         // Does this ever need to update orbit controls target ? Yes!
         // const focus_dist = ortho_camera_distance (distance)
@@ -837,9 +837,9 @@ class display_space
         //    focus_dist
         //    : distance
 
-        // Always do this now, even when using the perspective camera.  That was the
+        // Always do this now, even when using the perspective camera.  That way the
         // orthogonal camera will be ready.
-        const focus_dist = this._controls.set_camera_pos (direction, distance)
+        const focus_dist = this._controls.set_camera_pos (direction, distance, target_pos)
 
 
         this.update_frustum (focus_dist)
@@ -977,20 +977,29 @@ class display_space
         {   
         let msg = ""
 
+        // Check for same frame here, that way we can preserve the logic of the rest
+        // of the method.  In the future, this needs to be done in set_frame.
+        if  (frame === this.entity_manager.reference_frame 
+                && this.entity_manager.get_focus () == null
+                && ! force_reset)
+            {
+            return msg
+            }
+
         let pl = PLANETS.find (item => item.id === ref_frame_to_planet (frame))
 
         if  (pl)
             {
+            // Because we already checked for the same frame above, we know that if
+            // set_reference_frame returns false here, it is because the new frame doesn't
+            // have a native coordinate system.
             if  (this.set_reference_frame (frame, true, force_reset))
                 {
                 this.entity_manager.set_coord_center (null)
 
                 this.entity_manager.clear_focus ()
 
-                const target = new THREE.Vector3 (0., 0., 0.)
-
-                this._controls.target.copy (target)
-                this.target (pl.dist, this.get_camera_vector ('X'))  //No need to specify target
+                 this.target (pl.dist, this.get_camera_vector ('X'), new THREE.Vector3 (0, 0, 0))
 
                 this._target_label = pl.name
 
@@ -1015,10 +1024,7 @@ class display_space
 
                     this.entity_manager.set_coord_center (pl.id)
 
-                    const target = new THREE.Vector3 (0., 0., 0.)
-
-                    this._controls.target.copy (target)
-                    this.target (pl.dist, this.get_camera_vector ('X'))  //No need to specify target
+                    this.target (pl.dist, this.get_camera_vector ('X'), new THREE.Vector3 (0, 0, 0))
 
                     this._target_label = pl.name
 
@@ -1232,15 +1238,15 @@ class display_space
             //this._controls.target.copy  (actor.position)
             //this._camera.position.copy  (actor.position)
 
-            this._controls.set_target (actor.position)
-
             const distance = (actor.focus_dist)? actor.focus_dist : DEF_FOCUS_DISTANCE   
             
             const direction = this.get_camera_vector ('XZ') 
 
+            console.log ('setting target position to ' + actor.position.x + ', ' + actor.position.y + ', ' + actor.position.z)
+
             //this.set_camera_position (actor.position, distance, direction)
-            this.target (distance, direction)
-        }
+            this.target (distance, direction, actor.position)
+            }
 
         else 
             {

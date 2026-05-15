@@ -113,7 +113,7 @@ export const PLANETS =
             kindex: 3, 
             sscweb: false, 
             step_size: DEF_STEP_SIZE * 9, 
-            dist: 5,
+            dist: 8,
         },
     ] ;
 
