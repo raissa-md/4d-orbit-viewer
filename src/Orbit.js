@@ -4,7 +4,7 @@ import { PLANET_ORBIT_INTERVAL } from './constants.js'
 import { GEO } from "./App.jsx"
 import { HELIO } from "./App.jsx"
 import { SELENE } from "./App.jsx"
-import { Orbit_Data } from './App.jsx'
+// import { Orbit_Data } from './App.jsx'
 
 export const MSEC_PER_SEC  = 1000
 export const MSEC_PER_MIN  = 1000 * 60 ;
@@ -1696,7 +1696,7 @@ export function coord_system_to_frame (system)
 export function transform_coordinates (transform, ...args)
     {
 
-    const t0 = performance.now ()    
+    //const t0 = performance.now ()    
 
     let work = null
     let input_type = COORD_Format.UNKNNOWN
@@ -1801,7 +1801,7 @@ export function transform_coordinates (transform, ...args)
         work.splice (first, 3, ...transform.apply (undefined, p))
         }
 
-    const t1 = performance.now ()
+    // const t1 = performance.now ()
 
     // console.log (`transform_coordinates took ${t1 - t0} ms to transform ${len} coordinate tuples`)
 
@@ -1848,7 +1848,7 @@ export function ANY_to_GSE (any, system = COORD_System.UNKNOWN, time)
 
     switch (system)
         {
-        // Seleneocentric coordinate systems.  These coordinate systems do not resolve to GEI
+        // Selenocentric coordinate systems.  These coordinate systems do not resolve to GEI
         // but are transformed into GSE directly.
         case COORD_System.SSE :
             {
