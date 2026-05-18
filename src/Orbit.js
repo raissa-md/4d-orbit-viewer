@@ -669,7 +669,7 @@ export function create_rotation_matrix_z (α)
 
 export function add_vectors (a, b)
     {
-    // Make sure both a and b are the same lenght
+    // Make sure both a and b are the same length
     if  (a.length !== b.length)
         {
         return undefined

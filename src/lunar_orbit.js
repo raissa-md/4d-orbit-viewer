@@ -1,7 +1,8 @@
 import * as THREE from 'three'
+import { AU } from './Orbit.js'
 import { mltply } from './Orbit.js'
+import { add_vectors } from './Orbit.js'
 import { Orbit_Data } from './App.jsx'
-
 
 class Selene
     {
@@ -21,7 +22,7 @@ class Selene
         // vector math with them.
 
         // Solar position as a unit vector in GSE coordinates
-        const sun_vector = new THREE.Vector3 (sun_pos.x, sun_pos.y, sun_pos.z)
+        const sun_vector = new THREE.Vector3 (1.0, 0, 0)
 
         // Moon position as a vector in GSE coordinates
         const moon_vector = new THREE.Vector3 (moon_pos.x, moon_pos.y, moon_pos.z).normalize ()
@@ -55,11 +56,10 @@ class Selene
         a [2] [1] = z_axis.y
         a [2] [2] = z_axis.z
 
-        const relative_position = [gse [0] - moon_pos.x, gse [1] - moon_pos.y, gse [2] - moon_pos.z]
-
         // Return the GSE coordinates transformed to SSE coordinates by multiplying the transformation
         // matrix by the GSE coordinates.
-        return mltply (a, relative_position)
+        const relative_position = [gse[0] - moon_pos.x, gse[1] - moon_pos.y, gse[2] - moon_pos.z]
+        return mltply (a, relative_position)        
         }
 
     SSE_to_GSE (sse, sun_pos, time)
@@ -74,7 +74,7 @@ class Selene
         // vector math with them.
 
         // Solar position as a unit vector in GSE coordinates
-        const sun_vector = new THREE.Vector3 (sun_pos.x, sun_pos.y, sun_pos.z)
+        const sun_vector = new THREE.Vector3 (1.0, 0, 0)
 
         // Moon position as a vector in GSE coordinates
         const moon_vector = new THREE.Vector3 (moon_pos.x, moon_pos.y, moon_pos.z).normalize ()
@@ -108,12 +108,9 @@ class Selene
         a [2] [1] = y_axis.z
         a [2] [2] = z_axis.z
 
-        const relative_position = [sse [0] + moon_pos.x, sse [1] + moon_pos.y, sse [2] + moon_pos.z]
-
         // Return the SSE coordinates transformed to GSE coordinates by multiplying the transformation
         // matrix by the SSE coordinates.
-        return mltply (a, relative_position)
-
+        return add_vectors (mltply (a, sse), [moon_pos.x, moon_pos.y, moon_pos.z])
         }
     }
 
