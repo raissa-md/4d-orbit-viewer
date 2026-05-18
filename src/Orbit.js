@@ -928,22 +928,29 @@ export function sun_position (time)
     // Distance from the Earth to the Sun in AU
     const R = 1.00014 - 0.01671 * Math.cos (g) - 0.00014 * Math.cos (2*g)
 
-    let sind = seps * Math.sin (slp) ;
+    let sind = seps * Math.sin (slp) 
 
-    let cosd = Math.sqrt (1.0 - sind * sind) ;
+    let cosd = Math.sqrt (1.0 - sind * sind) 
 
     // Solar apparent declination 
-    let sdec = Math.atan (sind / cosd) ;
+    let sdec = Math.atan (sind / cosd) 
 
     // Solar apparent right ascension 
     let srasn = Math.PI - Math.atan2 ((ceps * sind) / (seps * cosd), -Math.cos(slp) / cosd) ;
 
     // Cosine of apparent solar declination 
-    let cosdec = Math.cos (sdec) ;
+    let cosdec = Math.cos (sdec) 
 
-    let sx = Math.cos (srasn) * cosdec  ;
-    let sy = Math.sin (srasn) * cosdec ;
-    let sz = Math.sin (sdec)  ;
+    //  Unit vector pointing toward the Sun in the geocentric equatorial (celestial) frame:
+    //  x -> vernal equinox, z -> north celestial pole
+    let sx = Math.cos (srasn) * cosdec   // X component (toward vernal equinox)
+    let sy = Math.sin (srasn) * cosdec   // Y component (90° east in equatorial plane)
+    let sz = Math.sin (sdec)             // Z component (toward north celestial pole)
+
+
+    // X and Y components of the unit vector pointing toward the Sun in the ecliptic plane
+    let Xe = R * Math.cos (λ * DEG2RD)
+    let Ye = R * Math.sin (λ * DEG2RD)
 
     let pos = {
         seps : seps,
@@ -958,8 +965,8 @@ export function sun_position (time)
         x : sx,
         y : sy,
         z : sz,
-        Xe : R * Math.cos ( λ * DEG2RD),
-        Ye : R * Math.sin ( λ * DEG2RD),
+        Xe : Xe,
+        Ye : Ye,
         } ;
 
     return pos ;
