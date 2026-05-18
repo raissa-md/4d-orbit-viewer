@@ -78,11 +78,13 @@ class MHD
 
     constructor (scene=null, name="unnamed", sx=64, sy=64)
         {
+        this.is_visible = false 
+
         this.scene = scene ; 
         this.name = name ;
         this.shape = new THREE.Mesh () ;
         //this.shape.transparent = true ;
-        this.shape.visible = false ;
+        this.shape.visible = this.is_visible 
         this.shape.material = new THREE.MeshPhongMaterial () ;
         this.shape.material.vertexColors = true ;
         this.shape.material.wireframe = false ;
@@ -104,6 +106,12 @@ class MHD
         this.index = [] ;
         this.start = 0.0 ;
         this.end = 360.0 ;
+        this._enabled = true 
+        this._reactivate_grid = false
+
+        document.addEventListener ("coord_change_evt", e => {
+            this.update (e.detail.time, e.detail.system)
+            })
 
         //protected static ModifiedJulianCalendar mjc = null;
         }
@@ -274,6 +282,21 @@ class MHD
 
     update (time, system = COORD_System.GSE)
         {
+        if  (! this._enabled)
+            {
+            if  (this._reactivate_grid)
+                {
+                this._enabled = true
+                this.shape.visible = this.is_visible
+                this._reactivate_grid = false
+                }
+            
+            else 
+                {
+                return 
+                }
+            }
+
         const coords = Frame_to_DS (GSE_to_ANY (this.points, system, time))
         const pos = new THREE.BufferAttribute (new Float32Array (coords), 3)
         this.shape.geometry.setAttribute ('position', pos ) 
@@ -308,7 +331,7 @@ class MHD
     //setOpacity(float opac) 
     setOpacity(opac) 
         {
-        this.getShape().material.opacity = opac ;
+        this.getShape().material.opacity = opac 
         }
 
     /**
@@ -328,9 +351,9 @@ class MHD
     //setSWP(float newSwp) 
     setSWP(newSwp) 
         {
-        this.swp = newSwp;
+        this.swp = newSwp
 
-        this.buildModel(this.swp, 0.2, 0.0, 360.0);
+        this.buildModel(this.swp, 0.2, 0.0, 360.0)
 
         //OrbitViewer.getSatellitePositionWindow().SWPChanged();
         }
@@ -359,12 +382,33 @@ class MHD
 
     set_visibility (visible)
         {
-        this.shape.visible = visible ;
+        this.is_visible = visible
+        this.shape.visible = this.is_visible && this._enabled
+        }
+
+    enable_grid ()
+        {
+        // Don't actually enable the grid here, just set the reactivate flag,
+        // Re-enabling it outside of the update method risk showing the user an
+        // incorrectly transformed grid for a brief moment.
+        this._reactivate_grid = true
+        }
+
+    disable_grid ()
+        {
+        this._enabled = false 
+        this.shape.visible = false
+        this._reactivate_grid = false // Probably not necessary, but just to be safe.
         }
 
     get visible ()
         {
-        return this.shape.visible ;
+        return this.is_visible ;
+        }
+
+    get enabled ()
+        {
+        return this._enabled  
         }
     }
 

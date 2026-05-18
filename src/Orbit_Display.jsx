@@ -1150,7 +1150,6 @@ class Display_Manager extends React.Component
                         open_coord_dialog={this.props.open_coord_dialog}
                         open_option_menu={this.props.open_option_menu}
                         invert={V3DSpace.icon_shade}
-                        coord_system={this.props.coord_system}
                         visible={! this.props.block_transport_bar}
                         />
 
@@ -1165,6 +1164,9 @@ class Display_Manager extends React.Component
                         //toggle_xy_grid={this.toggle_xy_grid}
                         //toggle_xz_grid={this.toggle_xz_grid}
                         //toggle_yz_grid={this.toggle_yz_grid}
+                        // We need to set this to true when using coordinate systems for objects other than the earth.
+                        // This should grey out the options to display the magnetosphere and bowshock.
+                        disable_field_boundaries = {this.props.disable_field_boundaries}
                         visible={! this.props.block_transport_bar}
                         set_orthogonal={this.set_orthogonal}
                         set_perspective={this.set_perspective}
@@ -1294,7 +1296,7 @@ class Obs_List extends React.Component
             const coord_str = coord_system_to_key (V3DSpace.coord_system)
             const coord_ctr = V3DSpace.coord_center
 
-            let text = `spacecraft positions in ${unit_str} in ${coord_str} coordinates` 
+            let text = `Spacecraft positions in ${unit_str} in ${coord_str} coordinates` 
             let disc = null
 
             if  (coord_ctr)

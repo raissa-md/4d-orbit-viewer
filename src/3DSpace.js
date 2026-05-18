@@ -33,19 +33,18 @@ import { epoch_to_date_time } from './Orbit_Display'
 import { get_default_unit } from './Orbit.js'
 import { convert } from './Orbit.js'
 import { ANY_to_GSE } from './Orbit.js'
-import { GSE_to_Frame } from './Orbit.js'
 import { GSE_to_WS } from './Orbit.js' 
 import { COORD_System } from './Orbit.js'
-import { DEF_HELIO_COORD_SYS } from './Orbit.js'
 import { DEF_GEO_COORD_SYS } from './Orbit.js'
 import { COORD_Unit } from './Orbit.js'
+import { REF_FRAME } from './Orbit.js'
 import { coord_system_to_frame } from './Orbit.js'
 import { coord_system_to_key } from './Orbit.js'
+import { ref_frame_to_planet } from './Orbit.js'
 import { JN, SSC_WS } from './ssc_ws.js'
 import Grid from './grids';
 import Axes from './Axes.js'
 import { system_time } from './entity_manager.js'
-import { resolveOnChange } from 'antd/lib/input/Input.js'
 
 function ortho_camera_distance (d)
     {
@@ -250,7 +249,7 @@ class Screen_Capture
         // Definition needs to be moved into start_recording if I want the ondataavailable()
         // function to be used.
         this.recorder.ondataavailable = (event) => {
-            console.log ('video')
+            // console.log ('video')
             if  (event.data && event.data.size > 0) 
                 {
                 this.chunks.push (event.data)
@@ -554,6 +553,7 @@ class display_space
 
         // Initialize the units 
         // this.entity_manager.set_unit (COORD_Unit.RE)
+        // this.update_camera
 
         // Initialize display width and display height to 0
         // They will be reset later
@@ -719,7 +719,8 @@ class display_space
         this._controls = new my_orbital_controls ( this._camera, this._display, this.entity_manager)
         
         // Start with the Earth as the focus.
-        this.update_frame ('EARTH')
+        //this.init_camera_position ('EARTH')
+        this.reset_camera_pos (REF_FRAME.EARTH, false, true) // Force reset to make sure the camera is in the right place.
 
         this.set_coord_system (DEF_GEO_COORD_SYS)
 
@@ -771,11 +772,6 @@ class display_space
                 v.setX (1)
             }
 
-        //const gse = ANY_to_GSE (v, this.entity_manager.coord_system, this.entity_manager.time)
-
-        //const gse_frame = GSE_to_Frame (gse, this.entity_manager.time, this.entity_manager.reference_frame)
-
-        //return GSE_to_WS (gse_frame) 
         return GSE_to_WS (v) 
         // Elon Musk says ‘get off your work-from-home bullshit’
         }
@@ -826,7 +822,7 @@ class display_space
         this._ortho_camera.updateProjectionMatrix ()
         }
 
-    target (distance, direction)
+    target (distance, direction, target_pos = new THREE.Vector3 (0, 0, 0))
         {
         // Does this ever need to update orbit controls target ? Yes!
         // const focus_dist = ortho_camera_distance (distance)
@@ -839,9 +835,9 @@ class display_space
         //    focus_dist
         //    : distance
 
-        // Always do this now, even when using the perspective camera.  That was the
+        // Always do this now, even when using the perspective camera.  That way the
         // orthogonal camera will be ready.
-        const focus_dist = this._controls.set_camera_pos (direction, distance)
+        const focus_dist = this._controls.set_camera_pos (direction, distance, target_pos)
 
 
         this.update_frustum (focus_dist)
@@ -880,7 +876,7 @@ class display_space
         const direction  = new THREE.Vector3 ().subVectors(this._camera.position, target).normalize ()
 
         // console.log (" switch camera - distance (actual) %f distance (calc) %f focus %f", this._camera.position.distanceTo (target), distance, focus_dist)
-        console.log (" switch camera - current zoom is ",  this._camera.zoom)
+        // console.log (" switch camera - current zoom is ",  this._camera.zoom)
 
         // Get rid of the Orbit Controls object. 
         this._controls.dispose ()
@@ -900,7 +896,7 @@ class display_space
 
         // this.set_zoom (distance, focus_dist) // done
 
-        console.log (" switch camera - reset zoom to ",  this._camera.zoom)
+        //console.log (" switch camera - reset zoom to ",  this._camera.zoom)
 
         // Recreate the controls
         // Must do this first
@@ -938,29 +934,127 @@ class display_space
         }
     */
 
-    update_frame (frame, enable_relative_orbits = false)
+    // Tasks for switching reference frames (and where they are done)
+    // frame is the center of a fixed coordinate system. 
+    // Things we need to sort out.
+    // is relative orbits enabled or not.
+    // is the frame we are updating to one with its own coordinate system.
+    //                                                                                call SET REFERENCE FRAME (entity manager)
+    //                                                                                (necessary to do for all cases)
+    //                                                                                (should return a value to see if native 
+    //                                                                                 coordinate system exists for the
+    //                                                                                 requested frame)
+    // Update to frame with native coordinate system                                       
+    // (This should be the same whether or not relative orbits is enabled)
+    //   Check if the current coordinate system is appropriate for the new frame      done by SET REFERENCE FRAME (entity manager)
+    //   (probably not since we are switching frames?)
+    //   If we do need to switch coordinates systems, do this: 
+    //      update the coordinate system                                              done by SET REFERENCE FRAME (entity manager)
+    //      update the unit.                                                          done by SET REFERENCE FRAME (entity manager)
+    //   clear the coordinate center                                                  call SET COORD CENTER (entity manager)
+    //   Clear the focus                                                              call CLEAR FOCUS (entity manager)
+    //   Set the target label                                                         (this) RESET CAMERA POS
+    //   Set focus on new central object (this is done through camera control)        (this) RESET CAMERA POS
+
+    // Update to frame without a native coordinate system
+    //   Relative orbits enabled. 
+    //      Check if the coordinate system is not GSE.                                ? Maybe have SET FRAME do this
+    //      (GSE is the only coordinate system that is used for relative orbits). 
+    //          set the coordinate system to GSE                                      ? call SET COORD SYSTEM (entity manager)
+    //          set the unit for GSE                                                  done by SET COORD SYSTEM (entity manager)
+    //     set the coordinate center                                                  call SET COORD CENTER (entity manager)                                            
+    //     clear the focus.                                                           call CLEAR FOCUS (entity manager)
+    //     Set the target label                                                       (this) RESET CAMERA POS
+    //     set the focus on the new central object (this is done through              (this) RESET CAMERA POS
+    //          camera control)                                                           
+    //   Relative orbits disabled
+    //      clear the coordinate center                                               call SET COORD CENTER (entity manager) 
+    //      set the focus on the central planet.                                      call SET FOCUS (3DSPACE)
+
+    reset_camera_pos (frame, enable_relative_orbits = false, force_reset = false)
         {   
-        // frame is the center of a fixed coordinate system. 
+        let msg = ""
 
-        let distance = 5
+        // Check for same frame here, that way we can preserve the logic of the rest
+        // of the method.  In the future, this needs to be done in set_frame.
+        if  (frame === this.entity_manager.reference_frame 
+                && this.entity_manager.get_focus () == null
+                && ! force_reset)
+            {
+            return msg
+            }
 
+        let pl = PLANETS.find (item => item.id === ref_frame_to_planet (frame))
+
+        if  (pl)
+            {
+            // Because we already checked for the same frame above, we know that if
+            // set_reference_frame returns false here, it is because the new frame doesn't
+            // have a native coordinate system.
+            if  (this.set_reference_frame (frame, true, force_reset))
+                {
+                this.entity_manager.set_coord_center (null)
+
+                this.entity_manager.clear_focus ()
+
+                 this.target (pl.dist, this.get_camera_vector ('X'), new THREE.Vector3 (0, 0, 0))
+
+                this._target_label = pl.name
+
+                // Really need to include the new target in this event.
+                document.dispatchEvent (this._focus_change_event)
+
+
+                msg = `Coordinate has been changed to 
+                         ${coord_system_to_key (this.entity_manager.coord_system)} 
+                         to align with new target`
+                }
+
+            else
+                {
+                if  (enable_relative_orbits)
+                    { 
+                    // set_coord_system already checks if the requested coordinate system is
+                    // the current coordinate system, so we don't need to check that here.  
+                    this.entity_manager.set_coord_system (COORD_System.GSE)
+
+                    this.entity_manager.clear_focus ()
+
+                    this.entity_manager.set_coord_center (pl.id)
+
+                    this.target (pl.dist, this.get_camera_vector ('X'), new THREE.Vector3 (0, 0, 0))
+
+                    this._target_label = pl.name
+
+                    document.dispatchEvent (this._focus_change_event)
+
+                    msg = `Now viewing spacecraft orbits relative to ${pl.name} in GSE-aligned coordinate system.`
+                    }
+
+                else
+                    {
+                    this.entity_manager.set_coord_center (null)
+
+                    this.set_focus (pl.id)  
+                    }
+                }
+
+            return msg
+            }
+
+        return null // Return something else on invalid frame?
+        }
+            
         // Return value.
         // When not an empty string, an appropriate message that the coordinate system has 
         // changed.  This is used by Manager.set_frame.
+        /*
         let coord_reset_msg = ""
 
         if (frame === "EARTH" )
             {
             if  (frame !== coord_system_to_frame (this.entity_manager.coord_system))
                 {
-                this.entity_manager.set_coord_system (DEF_GEO_COORD_SYS)
-
-                const new_system = coord_system_to_key (DEF_GEO_COORD_SYS)
-                
-                this.set_unit (get_default_unit (DEF_GEO_COORD_SYS))
-
-                coord_reset_msg = `Coordinate has been changed to ${new_system} to align
-                         with new target`
                 }
 
             this.entity_manager.set_coord_center ()
@@ -973,7 +1067,7 @@ class display_space
             
             this._target_label = "Earth"
  
-    
+        */
             /*
             if  (frame === coord_system_to_frame (this.entity_manager.coord_system))
                 {
@@ -992,6 +1086,7 @@ class display_space
                 return this.set_focus ("EARTH", false)
                 }
             */
+        /*
             }
 
         else if (frame === "SUN")
@@ -1017,6 +1112,7 @@ class display_space
             distance = (pl)? pl.dist : convert (distance, COORD_Unit.RS, COORD_Unit.RE)
 
             this._target_label = "Sun"
+        */
 
 
             /*
@@ -1037,6 +1133,32 @@ class display_space
                 return this.set_focus ("SUN", false)
                 }
             */
+        /*
+            }
+
+        else if (frame === "MOON")
+            {
+            if  (frame !== coord_system_to_frame (this.entity_manager.coord_system))
+                {
+                this.entity_manager.set_coord_system (DEF_LUNAR_COORD_SYS)
+
+                const new_system = coord_system_to_key (DEF_LUNAR_COORD_SYS)
+
+                this.set_unit (get_default_unit (DEF_LUNAR_COORD_SYS))
+
+                coord_reset_msg = `Coordinate has been changed to ${new_system} to align
+                         with new target`
+                }
+
+            this.entity_manager.set_coord_center ()
+
+            this.entity_manager.clear_focus ()
+
+            let pl = PLANETS.find (item => item.id === frame)
+
+            distance = (pl)? pl.dist : distance
+            
+            this._target_label = "Moon"
             }
 
         else
@@ -1098,6 +1220,7 @@ class display_space
 
         return coord_reset_msg
         }
+        */
 
     update_camera_to_follow (refocus=false)
         {
@@ -1113,15 +1236,15 @@ class display_space
             //this._controls.target.copy  (actor.position)
             //this._camera.position.copy  (actor.position)
 
-            this._controls.set_target (actor.position)
-
             const distance = (actor.focus_dist)? actor.focus_dist : DEF_FOCUS_DISTANCE   
             
             const direction = this.get_camera_vector ('XZ') 
 
+            console.log ('setting target position to ' + actor.position.x + ', ' + actor.position.y + ', ' + actor.position.z)
+
             //this.set_camera_position (actor.position, distance, direction)
-            this.target (distance, direction)
-        }
+            this.target (distance, direction, actor.position)
+            }
 
         else 
             {
@@ -1312,7 +1435,6 @@ class display_space
             // delta is the amount of time to animate over.
             this._pause = this.entity_manager.update_time (this._delta * this._rate, this._loop)
 
-            // *** this._earth.set_earth_rotation (this.entity_manager.time, this.entity_manager.reference_frame, this.entity_manager.coord_system)
             // *** this._earth.update_axes (this.entity_manager.time, this.entity_manager.coord_system, this.entity_manager.reference_frame)
             this.update_grids ()
             // Convert the time into a slider position and update the slider.
@@ -1349,7 +1471,6 @@ class display_space
             // Convert the slider position into a time and update the time.
             this.entity_manager.set_time (this.time_from_slider_position (this._slider_value))
 
-            // *** this._earth.set_earth_rotation (this.entity_manager.time, this.entity_manager.reference_frame, this.entity_manager.coord_system)
             // *** this._earth.update_axes (this.entity_manager.time, this.entity_manager.coord_system,this.entity_manager.reference_frame)
             this.update_grids ()
 
@@ -1372,12 +1493,26 @@ class display_space
         this.entity_manager.add_GS_to_planet ('EARTH', ...args)
         }
 
+    set_reference_frame (...args)
+        {
+        const r = this.entity_manager.set_reference_frame (...args)
+
+        return r
+        }
+
+    set_coord_center (...args)
+        {
+        this.entity_manager.set_coord_center (...args)
+        }
+
     set_unit (unit)
         {
         this.entity_manager.set_unit ( unit )
 
-        this._axes.set_coord_units (unit)
-        this._axes.update_axes ()
+        console.log ("setting unit: ", unit)
+
+        // this._axes.set_coord_units (unit)
+        // this._axes.update_axes ()
 
         return unit
         }
@@ -1638,6 +1773,20 @@ class display_space
             this.entity_manager.set_orbit_visible (true)
             }
         }
+    
+    disable_field_boundaries (disable = true)
+        {     
+        if  (disable)
+            {                                                                 
+            this._mhd.disable_grid ()
+            this._bowshock.disable_grid ()
+            }
+        else
+            {
+            this._mhd.enable_grid ()
+            this._bowshock.enable_grid ()
+            }
+        }
 
     update_orbit_data (...args)
         {
@@ -1645,7 +1794,6 @@ class display_space
 
         this._slider_value = 1
     
-        // *** this._earth.set_earth_rotation (this.entity_manager.time, this.entity_manager.reference_frame, this.entity_manager.coord_system)
         // *** this._earth.update_axes (this.entity_manager.time, this.entity_manager.coord_system, this.entity_manager.reference_frame)
         this.update_grids ()
 
@@ -1668,9 +1816,15 @@ class display_space
 
     set_coord_system (system)
         {
-        const current = this.entity_manager.coord_system
+        // const current = this.entity_manager.coord_system
+
+        // We are just going to pass the request to change the coordinate system to the 
+        // entity manager and then react to it by updating the grids and if necessary the
+        // field boundary objects.
 
         this.entity_manager.set_coord_system (system)
+        
+        /*
 
         // Check if the default coordinate system changed.  
         // This is bad because it relies on each class of coordinate systems having
@@ -1698,21 +1852,27 @@ class display_space
                     this.update_frame ("SUN")
                     break
 
+                case COORD_Unit.KM :
+
+                    this.update_frame ("MOON")
+                    break
+
                 default:
                 }
             }
+        */
+        
 
-         // this.update_frame (coord_system_to_frame (this.entity_manager.coord_system))
+        // this.update_frame (coord_system_to_frame (this.entity_manager.coord_system))
 
-        // *** this._earth.set_earth_rotation (this.entity_manager.time, this.entity_manager.reference_frame, this.entity_manager.coord_system)
         // *** this._earth.update_axes (this.entity_manager.time, 
         //    this.entity_manager.coord_system,
         //    this.entity_manager.reference_frame)
-        this.update_grids ()
+        // this.update_grids ()
 
         // Update the bowshock and magnetopause objects
-        this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-        this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+        // this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
+        // this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
         }
 
     /* No longer used
@@ -1720,7 +1880,6 @@ class display_space
         {
         this.entity_manager.set_reference_frame (...args)
 
-        // *** this._earth.set_earth_rotation (this.entity_manager.time, this.entity_manager.reference_frame, this.entity_manager.coord_system)
         // *** this._earth.update_axes (this.entity_manager.time, 
         //    this.entity_manager.coord_system,
         //    this.entity_manager.reference_frame)
@@ -1758,7 +1917,7 @@ class display_space
         if  (focus && focus.id === id)
             {
             // Reset the focus to the central object of the current coordinate system.
-            this.update_frame (coord_system_to_frame (this.entity_manager.coord_system))
+            this.reset_camera_pos (coord_system_to_frame (this.entity_manager.coord_system))
             }
 
         return this.entity_manager.remove (id)
@@ -1773,7 +1932,6 @@ class display_space
         {
         this.entity_manager.set_start_time (...args)
         // *** h.update_axes (this.entity_manager.time, this.entity_manager.coord_system, this.entity_manager.reference_frame) 
-        // *** this._earth.set_earth_rotation (this.entity_manager.timem, this.entity_manager.reference_frame, this.entity_manager.coord_system)
         this.update_grids ()
 
         // Update the bowshock and magnetopause objects
@@ -1793,7 +1951,8 @@ class display_space
 
     set_focus (target, ...args)
         {
-        
+        // Note: For the entity manager, set_focus just sets/clears a flag on all
+        // tracked entities.   
         if  (this.entity_manager.get_all_valid ().includes (target) === false)
             {
             console.log ("3DSpace: set_focus: Target " + target + " not valid.")
@@ -1846,7 +2005,7 @@ class display_space
         // Reset the focus to the central object of the current coordinate system.
         const new_target = coord_system_to_frame (this.entity_manager.coord_system)
 
-        this.update_frame (new_target)
+        this.reset_camera_pos (new_target)
 
         return new_target
         }
@@ -1859,7 +2018,7 @@ class display_space
 
     set_bowshock_visible (visible)
         {
-        this._bowshock.set_visibility (visible)
+        this._bowshock.set_visibility (visible)  // Do I really need this flag?
         this._bowshock_visible = this._bowshock.visible
         }
 

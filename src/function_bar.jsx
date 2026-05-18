@@ -116,6 +116,7 @@ class Function_Bar extends React.Component
                 onClick={this.toggle_bowshock} 
                 style={SIDE_BUTTON_STYLE}
                 image={bowshock_icon}
+                disabled={this.props.disable_field_boundaries}
                 alt="show bowshock button"
                 shade={this.props.invert}
                 toggle={this.state.bs_visible}
@@ -136,6 +137,7 @@ class Function_Bar extends React.Component
                 alt="show magnetopause button"
                 shade={this.props.invert}
                 toggle={this.state.magneto_visible}
+                disabled={this.props.disable_field_boundaries}
                 />
         </V_Tooltip> ;
 

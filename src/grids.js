@@ -4,8 +4,6 @@ import * as THREE from "three";
 
 import { ANY_to_GSE } from './Orbit.js'
 import { GSE_to_WS } from './Orbit.js'
-import { GSE_to_Frame } from './Orbit.js'
-import { REF_FRAME } from './Orbit.js'
 import { COORD_System } from './Orbit.js'
 import { COORD_Unit } from './Orbit.js'
 import { convert } from './Orbit.js'
@@ -39,7 +37,6 @@ class Grid extends THREE.LineSegments
                     cntr_color = CNTR_COLOR, 
                     //time = 0, 
                     //system = COORD_System.GSE,
-                    //frame = REF_FRAME.ECI,
                     unit = COORD_Unit.RE
                     ) 
 
@@ -70,6 +67,11 @@ class Grid extends THREE.LineSegments
         this.set_transform_vector ()
 
         this.update_grid_geometry (unit)
+
+        document.addEventListener ("unit_change_evt", e => {
+            this.update_grid (e.detail.unit)
+            })
+
         }
 
 
@@ -90,7 +92,6 @@ class Grid extends THREE.LineSegments
             this.grid.update_grid_geometry (requested_size, scale, color, cntr_color, to_gse) ;
     */
 
-    //set_color (color, time = 0, system = COORD_System.GSE, frame = REF_FRAME.ECI)
     set_color (color, unit = COORD_Unit.RE)
         {
         this._grid_color = new THREE.Color (color)
@@ -98,7 +99,6 @@ class Grid extends THREE.LineSegments
         this.update_grid_geometry (unit)
         }
 
-    //set_centerline_color (color, time = 0, system = COORD_System.GSE, frame = REF_FRAME.ECI)
     set_centerline_color (color, unit = COORD_Unit.RE)
         {
         this._center_line_color = new THREE.Color ( color )
@@ -106,7 +106,6 @@ class Grid extends THREE.LineSegments
         this.update_grid_geometry (unit)
         }
 
-    //set_requested_size (size, time = 0, system = COORD_System.GSE, frame = REF_FRAME.ECI)
     set_requested_size (size, unit = COORD_Unit.RE)
         {
         this._req_size = size
@@ -114,7 +113,6 @@ class Grid extends THREE.LineSegments
         this.update_grid_geometry (unit)
         }
 
-    //set_scale (scale, time = 0, system = COORD_System.GSE, frame = REF_FRAME.ECI)
     set_scale (scale, unit = COORD_Unit.RE)
         {
         this._scale = scale
@@ -201,29 +199,8 @@ class Grid extends THREE.LineSegments
         return this._transform 
         }
     
-    /*
-    get_ws_coord (xyz)
-        {
-        const coord = [xyz [this._transform [0]], xyz [this._transform [1]], xyz [this._transform [2]]] 
-
-        if  (this._to_gse === null)
-            {
-            return GSE_to_WS (new THREE.Vector3().fromArray(coord)).toArray () 
-            }
-        else
-            {
-            //return GSE_to_WS (this._to_gse (new THREE.Vector3().fromArray(coord))).toArray () 
-            }
-
-        }
-    */
-
-    // update_grid (time = 0, system = COORD_System.GSE, frame = REF_FRAME.ECI)
     update_grid (unit = COORD_Unit.RE)
         {
-        // GSE_to_WS (GSE_to_Frame
-        //const ws = GSE_to_WS (ANY_to_GSE (this.vertices, system, time))
-        //const ws = GSE_to_WS (GSE_to_Frame (ANY_to_GSE (this.vertices, system, time), time, frame))
         const ratio = convert (1, unit, COORD_Unit.GSE)
 
         const ws = GSE_to_WS (this.vertices.map (p => p * ratio))
@@ -242,7 +219,6 @@ class Grid extends THREE.LineSegments
         return r
         }
 
-    // update_grid_geometry (time = 0, system = COORD_System.GSE, frame = REF_FRAME.ECI)
     update_grid_geometry (unit = COORD_Unit.RE)
         {
 
@@ -318,7 +294,6 @@ class Grid extends THREE.LineSegments
         this.material.visible = visible
         }
     
-    // set_grid_position (offset = 0, time = 0, system = COORD_System.GSE, frame = REF_FRAME.ECI)
     set_grid_position (offset = 0, unit = COORD_Unit.RE)
         {
         this._offset = offset
@@ -327,8 +302,6 @@ class Grid extends THREE.LineSegments
         const p = this.transform ([0, 0, this._offset])
 
         // Convert the center point to the current coordinate system.
-        // const ws = GSE_to_WS (ANY_to_GSE (p, system, time))
-        // const ws = GSE_to_WS (GSE_to_Frame (ANY_to_GSE (p, system, time), time, frame))
         const ratio = convert (1, unit, COORD_Unit.GSE)
 
         const ws = GSE_to_WS (p.map (p => p * ratio))
