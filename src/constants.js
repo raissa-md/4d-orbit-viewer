@@ -1,7 +1,7 @@
 export const TITLE = "4D Orbit Viewer"
 export const CODE_SORCERESS = "Raissa Woodland"
-export const BUILD = "0-2026.05.15.0943"
-export const BUILD_DATE = "May 15, 2026"
+export const BUILD = "0-2026.05.18.16.15"
+export const BUILD_DATE = "May 18, 2026"
 // Use npm run build to build
 
 // export const SSC_WS_ACCESS = 'https://sscweb-dev.sci.gsfc.nasa.gov/'
