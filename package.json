@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:mcp": "vite build --config vite.config.mcp.js",
+    "build:all": "npm run build && npm run build:mcp",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -14,6 +16,7 @@
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/sora": "^5.2.8",
     "@fontsource/source-sans-3": "^5.2.9",
+    "@modelcontextprotocol/ext-apps": "^1.7.1",
     "antd": "^5.29.1",
     "file-saver": "^2.0.5",
     "flatpickr": "^4.6.13",
@@ -29,7 +32,8 @@
     "sprintf-js": "^1.1.3",
     "three": "^0.151.0",
     "three-spritetext": "^1.10.0",
-    "three.meshline": "^1.4.0"
+    "three.meshline": "^1.4.0",
+    "vite-plugin-singlefile": "^2.3.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
