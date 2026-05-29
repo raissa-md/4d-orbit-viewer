@@ -38,6 +38,22 @@ import { COORD_System }  from "./Orbit"
 import { GSE_to_WS } from "./Orbit"
 import { Frame_to_DS } from "./Orbit"
 import { GSE_to_ANY } from "./Orbit"
+import { Orbit_Data } from './App.jsx'
+
+const sdwp_modes = 
+    {
+    UNKNOWN: 0, 
+    USER: 1,        // User specifies the solar wind pressure independently of whether a value
+                    // for the magnetopause has been captured or not.  
+    MODEL: 2,       // The solar wind pressure is calculated based on the magnetopause position 
+                    // returned by the CCMC HAPI server.  This is the default mode. 
+    }
+
+export const SDWP_Modes = Object.freeze (sdwp_modes)
+
+// This probably should live someplace else.
+export const MP_STANDOFF_DATASET = 'SWMF2023_RT_STANDOFF_P1M' // Not used right now.
+export const MP_STANDOFF_ID = 'mp_standoff'
 
 //package gov.nasa.gsfc.spdf.orb.utils;
 
@@ -94,6 +110,8 @@ class MHD
         //this.shape.geometry = new THREE.BufferGeometry () ;
 
         this.color = new THREE.Color ("white") ;
+        this.swpmode = SDWP_Modes.MODEL
+        this.mpstandoff = null
         this.swp = 2.04 ;
         this.xmin = -45.0 ;
         this.indices = [] ;
@@ -119,7 +137,11 @@ class MHD
     set_parameters_from_dialog (surfWind) 
         {
 
-        this.set_parameters (surfWind.getSWP(), 
+        // Note: The function calls to get parameter values are a holdover from the Java code.  
+        // This will likely be an object that is passed if this ever gets used.
+        this.set_parameters (
+                            surfWind.getSWP_Mode(),
+                            surfWind.getSWP(), 
                              0.0, 
                              360.0,
                              surfWind.getColorButton().getBackground()) ;
@@ -127,7 +149,7 @@ class MHD
         }
 
     // set_parameters (float psw, float sina, float start, float end, Color4f cl) 
-    set_parameters (swp=2.04, start=0.0, end=360.0, diff_val="white", em_val, sp_val) 
+    set_parameters (mode = SDWP_Modes.MODEL, swp=2.04, start=0.0, end=360.0, diff_val="white", em_val, sp_val) 
         {
         this.color.set  (diff_val) 
 
@@ -151,7 +173,7 @@ class MHD
             this.shape.material.specular.set (sp_val) 
             }
             
-
+        this.swpmode = mode
         this.swp = swp ;
         this.start = start ;
         this.end = end ;
@@ -166,6 +188,45 @@ class MHD
         this.buildModel ()
 
         // addChild(shape);
+        }
+
+    get_mp_standoff (time)
+        {
+        // Check if the data is available before trying to access it. 
+        // I have no idea what to do if the data is not available.
+        if  (! Orbit_Data.entity_data_valid (MP_STANDOFF_ID))
+            {
+            console.log ("MP standoff data not available for id: ", MP_STANDOFF_ID, "returning true")
+
+            this.mpstandoff = null
+            return true //??  This should force an update, which is what I want in this case.  I think.
+            }
+
+        // Save the current value of the standoff distance so that we can check if it has
+        // changed after we get the new value.  If it has not changed, then there is 
+        // no need to update the geometry.
+        const old_mp_standoff = this.mpstandoff
+
+        // Get the index of vector position that corresponds to the current time.
+        // This will actually return an interpolated index value, but that is OK since 
+        // we can round it to an integer index value when we access the data.  
+        const index = Math.round (Orbit_Data.time_to_index (MP_STANDOFF_ID, time))  
+
+        const obj = Orbit_Data.get_value_at_index (MP_STANDOFF_ID, index)
+
+        // Get the standoff distance value at the current time index.
+        const mp_standoff = Object.values (obj)[0]
+
+        // Check if the standoff distance has significantly changed.
+        // If it has not, then there is no need to update the geometry.
+        if  (Math.abs (mp_standoff - old_mp_standoff) < 1e-3)
+            {
+            return false ;
+            }
+
+        this.mpstandoff = mp_standoff
+
+        return true ;
         }
 
     set_scene_graph (scene)
@@ -225,7 +286,7 @@ class MHD
         this.indices = [] ;
     
         this.create_index_array () ;
-        this.set_coordinate (this.swp, this.start, this.end) ;
+        this.set_coordinate (this.swp, this.start, this.end)
         this.update_geometry () ;
 
         if  (! this.is_in_scene ())
@@ -297,6 +358,18 @@ class MHD
                 }
             }
 
+        if  (this.swpmode === SDWP_Modes.MODEL )
+            {
+            // Get the standoff distance value at the current time.  If it has not 
+            // changed significantly, then there is no need to update the geometry.
+            if  (this.get_mp_standoff (time))
+                {
+                // Adjust the geometry to reflect the new standoff distance value.  
+                // This will involve recalculating the coordinates of the vertices
+                this.set_coordinate (this.swp, this.start, this.end)
+                }
+            }
+        
         const coords = Frame_to_DS (GSE_to_ANY (this.points, system, time))
         const pos = new THREE.BufferAttribute (new Float32Array (coords), 3)
         this.shape.geometry.setAttribute ('position', pos ) 
@@ -353,6 +426,8 @@ class MHD
         {
         this.swp = newSwp
 
+        // This should just call update_geometry, not buildModel, since that is the only
+        // thing that needs to be updated when the swp changes.  
         this.buildModel(this.swp, 0.2, 0.0, 360.0)
 
         //OrbitViewer.getSatellitePositionWindow().SWPChanged();
@@ -480,11 +555,12 @@ export class MHDPause extends MHD
     //static SIZEX = 128 ;
     //static SIZEY = 128 ;
 
-    constructor (scene=null, name="MHDpause")
+    constructor (scene=null, name="MHDpause", mode = SDWP_Modes.MODEL)
         {
-        super (scene, name, 128, 128) ;
+        // super (scene, name, 128, 128) ;
+        super (scene, name, 32, 32) ;
 
-        this.set_parameters (2.0, 0., 360., "indigo" ) ;
+        this.set_parameters (mode, 2.0, 0., 360., "indigo" ) ;
         }
     
     //MHDPause(MagnetopauseWindow magWind) 
@@ -548,15 +624,34 @@ export class MHDPause extends MHD
     // setCoordinate(float psw, float start, float end) 
     set_coordinate (psw, start, end) 
         {
-        let r, theta;
-        let x, y, z;
+        // Clear the points array before adding new points. 
+        this.points.length = 0
 
-        const prsw = psw;
+        let r, theta
+        let x, y, z
 
-        const rho = Math.pow((2.04 / prsw), (1. / 6.0));
+        const prsw = psw
 
-        let xmax = 11.0028195 * rho;
-        let cmin = this.xmin;
+        // Determine rho based on mode.
+        // MODEL mode back-solves rho from the measured standoff distance.
+        // Falls back to USER mode if no standoff value is available.
+        let rho
+        let xmax
+
+        if  (this.swpmode === SDWP_Modes.MODEL && this.mpstandoff !== null)
+            {
+            rho  = this.mpstandoff / 11.0028195
+            xmax = this.mpstandoff
+            }
+
+        else
+            {
+            rho = Math.pow ((2.04 / prsw), (1. / 6.0))
+            xmax = 11.0028195 * rho
+            }
+
+        // let xmax = 11.0028195 * rho
+        let cmin = this.xmin
         //let ii = 0;
 
         for (let i = 0; i < this.SIZEX; i++) 
@@ -731,9 +826,10 @@ export class MHDPause extends MHD
 
 export class MHDBowshock extends MHD 
     {
-    constructor (scene=null, name="MHDBowshock")
+    constructor (scene=null, name="MHDBowshock", mode = SDWP_Modes.MODEL)
         {
-        super (scene, name, 128, 128) ;
+        // super (scene, name, 128, 128) ;
+        super (scene, name, 32, 32) ;
 
         this.A = 0.0296;
         this.B = -0.0381;
@@ -743,7 +839,7 @@ export class MHDBowshock extends MHD
 
         //this.set_parameters (2.0, 0., 360., "violet", [0, 0.851, 0] ) ;
         //this.set_parameters (2.0, 0., 360., "hsl(300, 76.1%, 72.2%)", "hsl(300, 50%, 72.2%)" ) ;
-        this.set_parameters (2.0, 0., 360., "violet") ;
+        this.set_parameters (mode, 2.0, 0., 360., "violet") ;
         }
 
     set_parameters_from_dialog (bowWind) 
@@ -796,13 +892,67 @@ export class MHDBowshock extends MHD
 
     set_coordinate (psw, start, end) 
         {
+        this.points.length = 0
+
         let r, theta;
         let x, y, z;
 
-        const prsw = psw;
+        const prsw = psw
 
-        let rho = Math.pow ((2.04 / prsw), (1. / 6.6)) ;
-        let xmax =this.getXmax() + 14.3 * rho - 14.462 ;
+        // Determine rho based on mode.
+        // MODEL mode back-solves rho from the measured standoff distance.
+        // Falls back to USER mode if no standoff value is available.
+        let rho
+        let xmax
+
+        if  (this.swpmode === SDWP_Modes.MODEL && this.mpstandoff !== null)
+            {
+            // Derive bowshock rho from the SWMF magnetopause standoff distance.
+            //
+            // Both the magnetopause and the bowshock are empirically scaled by a
+            // dimensionless rho parameter that originally depends on solar wind
+            // dynamic pressure (psw):
+            //
+            //     rho_mp = (po / psw)^(1/6.0)        (magnetopause exponent)
+            //     rho_bs = (po / psw)^(1/6.6)        (bowshock exponent)
+            //
+            // At rho_mp = 1 (nominal psw = po = 2.04), the magnetopause noon
+            // standoff distance is exactly 11.0028195 Re.  In general:
+            //
+            //     mpstandoff = 11.0028195 * rho_mp
+            //
+            // So given a measured (SWMF) standoff distance, the equivalent rho_mp is:
+            //
+            //     rho_mp = mpstandoff / 11.0028195
+            //
+            // The two rho values share the same underlying psw, so converting from
+            // the magnetopause rho to the bowshock rho only changes the exponent:
+            //
+            //     rho_bs = (rho_mp)^(6.0/6.6)
+            //
+            // The bowshock's xmax then follows from its own formula, unchanged from
+            // the original USER mode:
+            //
+            //     xmax = getXmax() + 14.3 * rho_bs - 14.462
+            //
+            // This keeps the magnetopause and bowshock physically consistent: both
+            // surfaces respond to the same effective solar wind pressure, even when
+            // that pressure is being inferred from the SWMF standoff rather than
+            // supplied directly.
+            // (formula derrived by Anthropic/Claude Opus 4.7)
+            const ratio = this.mpstandoff / 11.0028195
+            rho = Math.pow (ratio, 6.0 / 6.6)
+            xmax = this.getXmax () + 14.3 * rho - 14.462
+
+            }
+
+        else
+            {
+            rho = Math.pow ((2.04 / prsw), (1. / 6.6)) 
+            xmax = this.getXmax() + 14.3 * rho - 14.462 
+            }
+
+        // let xmax = this.getXmax() + 14.3 * rho - 14.462 ;
 
         //let ii = 0;
         //let x0 = 14.3 * rho - 14.462 ;

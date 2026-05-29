@@ -41,6 +41,7 @@ import { PLANET_ORBIT_INTERVAL } from './constants.js'
 import { PLANETS } from './planet_data.js'
 
 import { SSC_WS } from './ssc_ws.js'
+import { CCMC_HAPI } from './ssc_ws.js'
 import { JN } from './ssc_ws.js'
 import { Orbit_Data } from './App.jsx'
 
@@ -51,12 +52,31 @@ const DEF_LABEL_OFFSET = [0, -.25, 0]
 
 const entity_types = 
     {
-    UNKNOWN: 0, 
+    UNKNOWN:    0, 
     SPACECRAFT: 1,
-    PLANET: 2
+    PLANET:     2,
+    VIRTUAL:    3,      // Virtual entities: data only, never displayed
     }
 
 export const ENT_type = Object.freeze (entity_types)
+
+const data_formats =
+    {
+    UNKNOWN:     0,
+    SCALAR:      1,     // Single value per timestamp (e.g. magnetopause standoff distance)
+    COORD:       2,     // XYZ position data (e.g. orbit data)
+    }
+
+export const DATA_Format = Object.freeze (data_formats)
+
+const data_sources =
+    {
+    UNKNOWN: 0,
+    SSC:     1,         // NASA SSC web services
+    CCMC:    2,         // CCMC HAPI endpoint
+    }
+
+export const DATA_Source = Object.freeze (data_sources)
 
 // Reasonable case that this should be a static class which is passed to 
 // the entity_manager.
@@ -272,6 +292,7 @@ export class entity
 
         this._is_planet = false
         this._is_sc = false
+        this._is_virtual = false
 
         this.get_orbit_pos = this.get_orbit_pos.bind (this)
         }
@@ -305,11 +326,12 @@ export class entity
     // This probably should be a method of Orbit_Data
     // This requires an array of coordinates in GSE [x, y, z]
     // This is no longer necessary. 
+    /*
     orbit_to_frame (gse, time = this._now, center = this._coord_center)
         {
         // Make sure the data for the coordinate center planet is available.
         // If it's not, just return the the original coordinates unchanged.
-        if  (center === null || ! Orbit_Data.orbit_data_valid (center))
+        if  (center === null || ! Orbit_Data.entity_data_valid (center))
             {
             return gse
             }
@@ -328,6 +350,7 @@ export class entity
 
         return r
         }
+    */
 
     set_coord_center (center = null)
         {
@@ -336,7 +359,7 @@ export class entity
             this._coord_center = center
 
             // If the object hasn't been instanced yet, then don't do anything.
-            if  (Orbit_Data.orbit_data_valid (this._id))
+            if  (Orbit_Data.entity_data_valid (this._id))
                 {
                 // Update spacecraft position to current time 
                 this.update_position (this._now)
@@ -352,7 +375,7 @@ export class entity
             this._coord_system = system
 
             // If the object hasn't been instanced yet, then don't do anything.
-            if  (Orbit_Data.orbit_data_valid (this._id))
+            if  (Orbit_Data.entity_data_valid (this._id))
                 {
                 // Update spacecraft position to current time 
                 this.update_position (this._now)
@@ -367,6 +390,7 @@ export class entity
 
         // const gse = this.orbit_to_frame (pos, time)  
 
+        // console.log ("Converting position to display system: ", pos, " at time ", time, " in system ", system)
         const r = Frame_to_DS (GSE_to_ANY (pos, system, time))
 
         return r
@@ -491,12 +515,12 @@ export class entity
 
     start_time ()
         {
-        return (Orbit_Data.orbit_data_valid (this._id))? Orbit_Data.get_time (this._id, 0) : 0
+        return (Orbit_Data.entity_data_valid (this._id))? Orbit_Data.get_time (this._id, 0) : 0
         }
 
     stop_time ()
         {
-        return (Orbit_Data.orbit_data_valid (this._id))? Orbit_Data.get_time (this._id, Orbit_Data.get_length (this._id) - 1) : 0
+        return (Orbit_Data.entity_data_valid (this._id))? Orbit_Data.get_time (this._id, Orbit_Data.get_length (this._id) - 1) : 0
         }
 
     // I am not sure that this will ever be used.
@@ -547,7 +571,7 @@ export class entity
     // I should probably use this instead of accessing Orbit_Data directly.
     data_valid ()
         {
-        return Orbit_Data.orbit_data_valid (this._id)
+        return Orbit_Data.entity_data_valid (this._id)
         }
 
     /*
@@ -689,85 +713,12 @@ export class entity
         }
     */
 
-    // Not used currently.
-    /*
-    simplify_curve (orbit)
-        {
-        const r = []
-
-        for (let index = 0 ; index < this._decimate.length ; index++)
-            {
-            r.push (...orbit.slice (this._decimate[index] * 3, this._decimate[index] * 3 + 3))
-            }
-
-        return r
-        }
-    */
-
-    // Not used currently.
-    /*
-    simplify_time (time)
-        {
-        const t = []
-
-        for (let index = 0 ; index < this._decimate.length ; index++)
-            {
-            t.push (this._time [this._decimate [index]])
-            }
-
-        return t
-
-        }
-    */
-
-    /* Not used currently.
-    // Returns an array of orbit coordinates in the same format that is required
-    // For meshline.  
-    // Why is this even here?
-    //  Should just use get_orbit_as_array
-    get_orbit_coord (system = COORD_System.GSE)
-        {
-        
-
-        let r = [] 
-
-        const repack = (e, i) => {
-            r.push (GSE_to_ANY (e, system, this._time [i]))
-            }
-
-        this._orbit.forEach (repack)
-
-        return r
-        }
-    */  
-
-    /* No longer used.
-    orbit_as_single_array ()
-        {
-        let r = []
-
-        for (let i = 0 ; i < this._orbit.length ; i++)
-            {
-            r.push (...xyz (this._orbit [i]))
-            }
-
-        return r
-        }
-    */
-
-    /* No longer used.
-    get_orbit_times ()
-        {
-        return [...this._time]
-        }
-    */
-
     clear_orbit_data ()
         {
         //this._time.length = 0
         //this._orbit.length = 0
 
-        Orbit_Data.delete_orbit (this._id)
+        Orbit_Data.delete_data (this._id)
 
         // Some of this may be moved to Orbit_Data in the future
         this._now = 0
@@ -811,7 +762,7 @@ export class entity
         return r
         }
 
-    orbit_data_valid (start=0, end=0)
+    entity_data_valid (start=0, end=0)
         {
         if  (start > 0 && end > 0 && start < end)
             {
@@ -898,6 +849,11 @@ export class entity
     get is_planet ()
         {
         return this._is_planet
+        }
+
+    get is_virtual ()
+        {
+        return this._is_virtual
         }
 
     get id ()
@@ -1021,7 +977,7 @@ class planet extends entity
             {
             return new Promise ((resolve) => 
                 {
-                Orbit_Data.create_orbit_data (this._id, t0, t1, PLANET_ORBIT_INTERVAL * 60 * 1000)
+                Orbit_Data.create_pseudo_data (this._id, t0, t1, PLANET_ORBIT_INTERVAL * 60 * 1000)
                     
                 resolve ()
                 });
@@ -1534,12 +1490,12 @@ class spacecraft extends entity
         // const orbit = this.orbit_as_single_array (true)
         // const time  = this._time
 
-        const orbit = Orbit_Data.orbit_to_array (
+        const orbit = Orbit_Data.data_to_array (
             Orbit_Data.decimate (
                 Orbit_Data.get_relative_orbit_data (
                     this._id, 
                     center
-                    ))) 
+                    )), DATA_Format.COORD) 
 
         const time  = Orbit_Data.decimate (Orbit_Data.get_time_vector (this._id))
 
@@ -1808,6 +1764,166 @@ class spacecraft extends entity
         }
     }
 
+// TODO: _data_format and _data_source should eventually be added to planet and spacecraft.
+export class virtual_entity extends entity
+    {
+    constructor (...args)
+        {
+        super (...args)
+
+        this._data_format = DATA_Format.UNKNOWN
+        this._data_source = DATA_Source.UNKNOWN
+        this._dataset = ''
+        this._parameter = ''  // this is going to have to be changed if we ever want to support
+                              // anything more than scalar parameters. 
+        this._null_value = 'null'
+
+        if  (args.length === 1 && typeof args[0] === 'object')
+            {
+            args [0].data_format && (this._data_format = args [0].data_format)
+            args [0].data_source && (this._data_source = args [0].data_source)
+            args [0].null_value && (this._null_value = args [0].null_value)
+            args [0].dataset && (this._dataset = args [0].dataset)
+            args [0].parameter && (this._parameter = args [0].parameter)
+            }
+
+        this._is_virtual = true
+        this._type = ENT_type.VIRTUAL
+
+        console.log ("Creating virtual entity with id = ", this._id, )
+        console.log ("  data format = ", this._data_format)
+        console.log ("  data source = ", this._data_source)    
+        }
+
+    async get_orbit_data (t0, t1)
+        {
+        this.clear_orbit_data ()
+
+        console.log ("Getting data for virtual entity with id = ", this._id)
+
+        if  (this._data_source === DATA_Source.SSC)
+            {
+            // This is a bit hacky, but we can actually retrieve orbit data from SSC
+            // without creating a spacecraft by using the virtual class and setting
+            // the data source to SSC_WS.  
+            // Eventually, we may want to extend to extend it to other products such as
+            // ground stations or magnetic footprints.
+            return SSC_WS.get_orbit_data (this._id, t0, t1, 12, 'GSE', COORD_Unit.RE)
+            }
+        if  (this._data_source === DATA_Source.CCMC)
+            {
+            return CCMC_HAPI.get_data (this._id, t0, t1, this._dataset, this._parameter, this._null_value)
+            }
+        
+        return Promise.resolve () // maybe should reject if data source is unknown?
+        }
+
+    async deploy (t0, t1)
+        {
+        this._tstart = t0
+        this._tend = t1
+
+        console.log ("Deploying virtual entity with id = ", this._id)
+            
+        const r = this.get_orbit_data (t0, t1)
+        //const r = true
+
+        return r.then (() =>
+            {
+            super.deploy ()
+            }) ;
+        }
+
+
+    available ()
+        {
+        // Data is always available for virtual entities.
+        return true
+        }
+
+    calc_position ()
+        {        
+        // Override class default method.  Because virtual objects are never displayed, 
+        // we don't need to calculate a position for them.  
+        }
+
+    V3_from_orbit ()
+        {
+        // Override class default method.  Virtual objects may contain scalar as well as orbit
+        // data,so we can't create a Vector3 as we would with a spacecraft or planet.
+        } 
+
+    index_to_DS ()
+        {
+        // Override class default method.  Virtual objects may contain scalar as well as orbit
+        // data,so we can't convert an index to a position in a coordinate system as we would 
+        // with a spacecraft or planet.
+        }
+
+    update_position ()
+        {
+        // Override class default method.  Virtual objects are never displayed, so we don't need to 
+        // calculate a position for them.  
+        }  
+
+    set_label_view_dist ()
+        {
+        // Override class default method.  Virtual objects are never displayed, so they don't have
+        // labels that need to be scaled based on view distance.
+        }
+
+    set_label_visible ()
+        {
+        // Override class default method.  Virtual objects are never displayed, so they don't have
+        // labels that can be shown or hidden.
+        }
+
+    set_label_color ()
+        {
+        // Override class default method.  Virtual objects are never displayed, so they don't have
+        //  labels that can have their color changed.
+        }
+        
+    set_focus ()
+        {
+        // Override class default method.  Virtual objects are never displayed, so they
+        // can't be focused on.
+        // This should never be called, and maybe throw an error if it is?
+        }
+
+    scale_label ()
+        {
+        // Override class default method.  Virtual objects are never displayed, so they 
+        // don't have labels that need to be scaled.
+        }
+
+    get_orbit_pos ()
+        {
+        // Override class default method.  Virtual objects may contain scalar as well as orbit
+        // data,so we can't get an orbit position for them as we would with a spacecraft or planet.
+        }
+
+    dispose ()
+        {
+        // The method clear_orbit_data () will work for any data format. 
+        // We may want to rename the method at some point to reflect this.
+
+        this.clear_orbit_data ()
+        }
+
+    get data_format ()
+        {
+        return this._data_format
+        }
+
+    get data_source ()
+        {
+        return this._data_source
+        }
+
+    // Should probably override many of the getter methods, but I will do that later.
+    }
+
 export class entity_manager
     {
     constructor (scene_reference)
@@ -1875,7 +1991,7 @@ export class entity_manager
 
         this.list.set (actor.id, actor)
 
-        this.sc_change = true
+        this.sc_change = true  // maybe change the name of the property to 'entity_change' ?
 
         return true 
         }
@@ -1900,6 +2016,13 @@ export class entity_manager
 
 
         return this.add (pl)
+        }
+
+    add_virtual (...args)
+        {
+        const v = new virtual_entity (...args)
+
+        return this.add (v)
         }
 
     remove (id)
@@ -2438,6 +2561,8 @@ export class entity_manager
         return null
         }
 
+    // Set the viewscreen display size, and pass this information on to the actors
+    // so they can update their materials accordingly (currently not used).
     set_display_size (x, y)
         {
         this.x_disp = x

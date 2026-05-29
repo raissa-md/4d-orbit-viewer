@@ -2078,11 +2078,13 @@ export function SSE_to_GSE (...args)
 //export function GSE_to_WS (x, y, z, normalize = 0)
 export function GSE_to_WS (...args)
     {
+    // console.log ('GSE_to_WS')
     return transform_coordinates (GSE_to_WS_base, ...args)
     }
 
 export function Frame_to_DS (...args)
     {
+    // console.log ('Frame_to_DS')
     return transform_coordinates (Frame_to_DS_base, ...args)
     }
 

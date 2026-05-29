@@ -32,6 +32,8 @@ import { V_Tooltip } from './UI.jsx'
 import Message_Queue from './message_box.jsx';
 import { REF_FRAME } from './Orbit.js';
 import { ENT_type } from './entity_manager.js'
+import { DATA_Format } from './entity_manager.js'
+import { DATA_Source } from './entity_manager.js'
 import { COORD_System } from './Orbit.js'
 import { key_to_coord_system } from './Orbit.js'
 import { coord_system_to_key } from './Orbit.js'
@@ -3028,7 +3030,7 @@ class Base_Layout extends React.Component
             //const coord = V3DSpace.get_orbit_coord (id, COORD_System.GSE)
 
             const time = Orbit_Data.get_time_vector (id)
-            const coord = Orbit_Data.get_orbit_vector (id)
+            const coord = Orbit_Data.get_data_vector (id)
 
             const n = time.length 
             const tstart = moment.utc(time [0]).format(dfrmt) 
@@ -3761,6 +3763,17 @@ class Manager extends React.Component
             V3DSpace.set_start_time (this.state.start_time)
             V3DSpace.set_end_time (this.state.end_time)
             V3DSpace.add_all_planets ()
+            // This probably should live somewhere else.
+            V3DSpace.add_virtual (
+                {
+                id: 'mp_standoff',
+                name: 'Magnetopause Standoff Distance',
+                data_format: DATA_Format.SCALAR,
+                data_source: DATA_Source.CCMC,
+                dataset: 'SWMF2023_RT_STANDOFF_P1M',
+                parameter:'mp_standoff_noon_lt',
+                })
+
             V3DSpace.update_orbit_data ()
 
             V3DSpace.init_complete ()
