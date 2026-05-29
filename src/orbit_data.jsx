@@ -1,3 +1,5 @@
+import { DATA_Format } from "./entity_manager.js"
+
 export class Orbit_Data_Store 
     {
     static DEFAULT_MAX_POINTS = 4000 
@@ -6,73 +8,99 @@ export class Orbit_Data_Store
     constructor() 
         {
         /**
-         * Stores orbit data by Entity ID.
+         * Stores data by Entity ID.
          * Each entry contains:
          * time_vector: Array of timestamps (UTC milliseconds since epoch).
-         * pos_vector:  Array of {x, y, z} objects, where x, y, z represent
-         * object positions in GSE coordinates at the corresponding time.
+         * data_vector:  Array of {} objects.  For orbit data, each object 
+         * contains x, y, z representing positions in GSE coordinates at 
+         * the corresponding time.
          */
         this.registry = new Map ()
         }
 
-    store_orbit_data (id, time, position_data) 
+    create_empty_data_obj (format=DATA_Format.COORD)
+        {
+        /**
+         * Creates an empty data object with the specified format.
+         * @param {enum} format - The format of the data (default is COORD).
+         * @returns {Object} - An empty data object with the specified format.
+         */
+
+        switch (format)
+            {
+            case DATA_Format.SCALAR:
+                return {x: 0}
+
+            case DATA_Format.COORD:
+                return {x: 0, y: 0, z: 0}
+
+            default:
+                return {}
+            }
+        }
+
+    store_data (id, time, data, format=DATA_Format.UNKNOWN) 
         {
         /**
          * Stores the independent time and position arrays for a body.
          * @param {string} id - The ID of the spacecraft or planet.
          * @param {Array} time - The array of timestamps.
-         * @param {Array} position_data - The array of {x, y, z} objects.
+         * @param {Array} data - The array of {} objects.
+         * @param {enum} format - The format of the data.
+         * Note: No attempt is made to validate the data format or consistency.
+         * It is assumed that the caller is providing valid data format.
          */ 
-        // console.log ("Request to store orbit data for ", id, " with ", time.length, " time points.")
+        console.log ("Request to store data for ", id, " with ", time.length, " time points in format ", format)
 
         this.registry.set (id, 
             {
             time_vector: time,
-            pos_vector: position_data
+            data_vector: data,
+            format: format
             });
         }
 
-    create_orbit_data (id, t0, t1, cadence)
+    create_pseudo_data (id, t0, t1, cadence, format=DATA_Format.COORD)
         {
         /**
-         * Generates pseudo-orbit data for the requested object between
-         * times t0 and t1 at the specified cadence.  Pseudo-orbit is 
-         * (0,0,0)
+         * Generate pseudo data for the requested object between times t0 and t1
+         * at the specified cadence.  Pseudo data is set to all zeros.
          * @param {string} id
          * @param {number} t0 - Start time (UTC milliseconds since epoch)
          * @param {number} t1 - End time (UTC milliseconds since epoch)
          * @param {number} cadence - Time step in milliseconds
+         * @param {enum} format - The format of the data (default is COORD).
          */
         const time_vector = []
-        const pos_vector = []
+        const data_vector = []
 
         for (let t = t0; t <= t1; t += cadence)
             {
             time_vector.push (t)
-            pos_vector.push ({ x: 0, y: 0, z: 0 })
+            data_vector.push (this.create_empty_data_obj (format))  
             }
 
-        this.store_orbit_data(id, time_vector, pos_vector)
+        this.store_data(id, time_vector, data_vector, format)
         }
 
-    orbit_data_valid (id) 
+    entity_data_valid (id) 
         {
         /**
-         * Checks if orbit data exists for a specific entity ID.
+         * Checks if data exists for a specific entity ID.
          * @param {string} id 
          * @returns {boolean}
          */
         return this.registry.has (id)
         }
 
-    get_orbit_vector (id) 
+    get_data_vector (id) 
         {
         /**
-        * Retrieves the full data object for a specific body.
+        * Retrieves the full data object for a specific entity.
         * @param {string} id 
-        * @returns {Array|null} - Orbit position data in GSE coordinates or null if not found.
+        * @returns {Array|null} - An array of data objects or null if not found.
         */
-        return (this.registry.get (id)).pos_vector || null
+        return (this.registry.get (id)).data_vector || null
         }
 
     /* Old Version.
@@ -86,7 +114,7 @@ export class Orbit_Data_Store
          * @param {number} index 
          * @returns {Object|null} - Position {x, y, z} or null if not found.
          *
-        const orbit = this.registry.get(id).pos_vector[index] || null
+        const orbit = this.registry.get(id).data_vector[index] || null
 
         return orbit
         }
@@ -95,19 +123,25 @@ export class Orbit_Data_Store
     get_pos (id, index, center=null)
         {
         /**
-         * Retrieves the position of id relative to center at a specific index.
-         * Does not perform bounds checking on index.
+         * Retrieves the position of the entity with id relative to center at a
+         * specific index. Does not perform bounds checking on index.
          * @param {string} id 
          * @param {number} index 
          * @param {string|null} center - The ID of the center body. If null, uses the origin (0,0,0).
          * @returns {Object|null} - Relative position {x, y, z} or null if data is invalid.
          */
+
+        // Check that the data is in COORD format. If not, return null.
+        if  (! this.entity_data_valid (id) || this.registry.get(id).format !== DATA_Format.COORD)
+            {
+            return null 
+            }
         
         // Start with the position of the target body at the specified index.
-        const orbit = this.registry.get(id).pos_vector[index] || null
+        const orbit = this.registry.get(id).data_vector[index] || null
 
         // Check if center is specified and if data exists. If not, ignore the center.
-        if  (center === null || ! this.orbit_data_valid (center))
+        if  (center === null || ! this.entity_data_valid (center))
             {
             return orbit
             }
@@ -127,12 +161,26 @@ export class Orbit_Data_Store
             }
         }
 
+    get_value_at_index (id, index)
+        {
+        /**
+         * Retrieves the value at a specific index for an entity.
+         * Does not perform bounds checking on index.
+         * @param {string} id 
+         * @param {number} index 
+         * @returns {number|null} - Value at the specified index or null if not found.
+         */
+        const value = this.registry.get(id).data_vector[index] || null
+
+        return value
+        }   
+
     get_length (id)
         {
         /**
-         * Retrieves the length of the orbit data for a specific body.
+         * Retrieves the length of the data vector for a specific entity.
          * @param {string} id 
-         * @returns {number|null} - Length of orbit data or null if not found.
+         * @returns {number|null} - Length of data vector or null if not found.
          */
         const length = this.registry.get(id).time_vector.length || null
 
@@ -142,7 +190,7 @@ export class Orbit_Data_Store
     get_time (id, index)
         {
         /**
-         * Retrieves the time at a specific index for a body.
+         * Retrieves the time at a specific index for an entity.
          * Does not perform bounds checking on index.
          * @param {string} id 
          * @param {number} index 
@@ -156,12 +204,12 @@ export class Orbit_Data_Store
     is_last_index (id, index)
         {
         /**
-         * Checks if the provided index is the last index for the body's orbit data.
+         * Checks if the provided index is the last index for the entity's data vector.
          * @param {string} id 
          * @param {number} index
          * @returns {boolean|null} - True if last index, false if not, null if data not found.
          */
-        const length = this.get_length(id)
+        const length = this.get_length (id)
 
         return (length === null)? null : index === length - 1
         }
@@ -170,34 +218,40 @@ export class Orbit_Data_Store
     get_relative_orbit_data (id, center=null)
         {
         /**
-         * Retrieves the orbit data of id relative to center.
+         * Retrieves the orbit data of an entity relative to center.
          * @param {string} id - The ID of the target spacecraft or planet.
          * @param {string|null} center - The ID of the center body. If null, uses the origin (0,0,0).
          * @returns {Array|null} - Relative orbit position data or null if data is invalid.
          */
 
         // Make sure target data exists
-        if  (! this.orbit_data_valid (id))
+        if  (! this.entity_data_valid (id))
             {
             return null 
             }
+
+        // Check that the data is in COORD format. If not, return null.
+        if  (this.registry.get(id).format !== DATA_Format.COORD)
+            {
+            return null 
+            }   
 
         // Check if center is specified
         if  (center === null)
             {
             // console.log ("Returning absolute orbit data for ", id)
 
-            return this.get_orbit_vector (id)
+            return this.get_data_vector (id)
             }
 
         // Check if center data exists. If not, ignore the center.
-        if  (! this.orbit_data_valid (center))
+        if  (! this.entity_data_valid (center))
             {
-            return this.get_orbit_vector (id)
+            return this.get_data_vector (id)
             }
 
         // Get absolute orbit data
-        const target_orbit = this.get_orbit_vector (id)
+        const target_orbit = this.get_data_vector (id)
 
         // Get time data
         const time = this.get_time_vector (id)
@@ -223,17 +277,17 @@ export class Orbit_Data_Store
     get_time_vector (id)
         {
         /**
-         * Retrieves the time vector for a specific body.
+         * Retrieves the time vector for a specific entity.
          * @param {string} id 
          * @returns {Array|null} - Array of timestamps (UTC milliseconds since epoch) or null if not found.
          */
         return (this.registry.get (id)).time_vector || null
         }
 
-    delete_orbit (id) 
+    delete_data (id) 
         {
         /** 
-         * Deletes orbit data for a specific entity ID.
+         * Deletes the data for a specific entity ID.
          * @param {string} id 
          */
         this.registry.delete (id)
@@ -243,12 +297,12 @@ export class Orbit_Data_Store
     before_time_range (id, time)
         {
         /** 
-         * Checks if the requested time is prior to the start of the orbit data.
+         * Checks if the requested time is prior to the start of the data vector.
          * @param {string} id 
          * @param {number} time - UTC milliseconds since epoch
          * @returns {boolean|null} - True if prior, false if not, null if data invalid.
          */
-        if  (! this.orbit_data_valid (id))
+        if  (! this.entity_data_valid (id))
             {
             return null 
             }   
@@ -261,12 +315,12 @@ export class Orbit_Data_Store
     after_time_range (id, time)
         {
         /** 
-         * Checks if the requested time is after the end of the orbit data.
+         * Checks if the requested time is after the end of the data vector.
          * @param {string} id 
          * @param {number} time - UTC milliseconds since epoch
          * @returns {boolean|null} - True if after, false if not, null if data invalid.
          */
-        if  (! this.orbit_data_valid (id))
+        if  (! this.entity_data_valid (id))
             {
             return null 
             }   
@@ -279,7 +333,7 @@ export class Orbit_Data_Store
     interpolate_time_at_index (id, index)
         {
         /**
-         * Interpolates time at a specific index for a body.
+         * Interpolates time at a specific index for an entity.
          * Index is a floating-point number; the integer part is the lower bound index,
          * and the fractional part is used for interpolation.
          * @param {string} id 
@@ -287,7 +341,7 @@ export class Orbit_Data_Store
          * @returns {number|null} - Interpolated time (UTC milliseconds since epoch) or null if data is invalid.
          */
         // Make sure target data exists
-        if  (! this.orbit_data_valid (id))
+        if  (! this.entity_data_valid (id))
             {
             return null 
             }
@@ -304,7 +358,7 @@ export class Orbit_Data_Store
     interpolate_pos_at_index (id, index)
         {
         /** 
-         * Interpolates position at a specific index for a body.
+         * Interpolates position at a specific index for an entity.
          * Index is a floating-point number; the integer part is the lower bound index,
          * and the fractional part is used for interpolation.
          * @param {string} id 
@@ -315,7 +369,13 @@ export class Orbit_Data_Store
         // console.log ("Interpolating position for ", id, " at index ", index)
 
         // Make sure target data exists
-        if  (! this.orbit_data_valid (id))
+        if  (! this.entity_data_valid (id))
+            {
+            return null 
+            }
+
+        // Check that the data is in COORD format. If not, return null.
+        if  (this.registry.get(id).format !== DATA_Format.COORD)
             {
             return null 
             }
@@ -328,12 +388,12 @@ export class Orbit_Data_Store
 
         if  (i >= max_index)
             {
-            return this.registry.get(id).pos_vector [max_index]
+            return this.registry.get(id).data_vector [max_index]
             }
 
         // Otherwise, perform interpolation between index i and i+1.
-        const p0 = this.registry.get(id).pos_vector [i]
-        const p1 = this.registry.get(id).pos_vector [i + 1]
+        const p0 = this.registry.get(id).data_vector [i]
+        const p1 = this.registry.get(id).data_vector [i + 1]
 
         const pos = {
             x: p0.x + (index - i) * (p1.x - p0.x),
@@ -356,7 +416,7 @@ export class Orbit_Data_Store
          */
         
         // Make sure target data exists
-        if  (! this.orbit_data_valid (id))  
+        if  (! this.entity_data_valid (id))  
             {
             return null 
             }
@@ -404,7 +464,7 @@ export class Orbit_Data_Store
         return interpolate ? index : Math.round (index)
         }
 
-    interpolate_pos_at_time (t0, t1, p0, p1, time) 
+    static interpolate_pos_at_time (t0, t1, p0, p1, time) 
         {
         /**
         * Estimates GSE position at time with edge-case checks for efficiency.
@@ -447,9 +507,15 @@ export class Orbit_Data_Store
          */
 
         // Make sure target data exists
-        if  (! this.orbit_data_valid (id))
+        if  (! this.entity_data_valid (id))
             {
             return null
+            }
+
+        // Check that the data is in COORD format. If not, return null.
+        if  (this.registry.get(id).format !== DATA_Format.COORD)
+            {
+            return null 
             }
 
         // Find the appropriate index for the given time.  Note, index is a floating-point number.
@@ -478,7 +544,13 @@ export class Orbit_Data_Store
          */
         
         // Make sure target data exists
-        if  (! this.orbit_data_valid (id))
+        if  (! this.entity_data_valid (id))
+            {
+            return null 
+            }
+
+        // Check that the data is in COORD format. If not, return null.
+        if  (this.registry.get(id).format !== DATA_Format.COORD)
             {
             return null 
             }
@@ -493,7 +565,7 @@ export class Orbit_Data_Store
             }
 
         // Make sure center data exists. If not, ignore the center.
-        if  (! this.orbit_data_valid (center))
+        if  (! this.entity_data_valid (center))
             {
             return target_pos
             }
@@ -545,47 +617,66 @@ export class Orbit_Data_Store
         return decimated_data
         }
 
-    orbit_to_array (orbit)
+    data_to_array (data, format=DATA_Format.UNKNOWN)
         {
         /**
-         * Converts an orbit array of {x, y, z} objects to a flattened array.
-         * @param {Array} orbit - Array of {x, y, z} objects.
-         * @returns {Array} - Flattened array of orbit coordinates [x1, y1, z1, x2, y2, z2, ...].
+         * Converts an orbit array of data {} objects to a flattened array.
+         * @param {Array} data - Array of data {} objects.
+         * @param {enum} format - The format of the data (SCALAR, COORD or UNKNOWN).
+         * @returns {Array} - Flattened array of data values.  For orbit coordinates
+         *      it will look like [x1, y1, z1, x2, y2, z2, ...].
          */
         const result = []
 
-        for (let i = 0; i < orbit.length; i++)
+        switch (format)
             {
-            result.push (orbit[i].x)    
-            result.push (orbit[i].y)
-            result.push (orbit[i].z)
+            case DATA_Format.COORD:
+
+                for (let i = 0; i < data.length; i++)
+                    {
+                    result.push (data[i].x)    
+                    result.push (data[i].y)
+                    result.push (data[i].z)
+                    }
+
+                break
+
+            default:
+
+                for (let i = 0; i < data.length; i++)
+                    {
+                    const values = Object.values (data[i])
+                    // Use the spread operator to push all values of the object into the result array.
+                    result.push (...values)
+                    }
             }
 
         return result
         }
 
-    get_orbit_as_array (id)
+    get_data_as_array (id)
         {
         /** 
-         * Returns entity orbit as an array of [x1, y1, z1, x2, y2, z2, ...].
-         * @param {string} id - The ID of the target spacecraft or planet.
-         * @returns {Array|null} - Flattened array of orbit coordinates or null if data is invalid.
+         * Returns entity data as a flattened array of values.  For orbit data, the format will be
+         * [x1, y1, z1, x2, y2, z2, ...].
+         * @param {string} id - The ID of the target entity.
+         * @returns {Array|null} - Flattened array of data values or null if id is invalid.
          */
 
         // Make sure target data exists
-        if  (! this.orbit_data_valid (id))
+        if  (! this.entity_data_valid (id))
             {
             return null 
             }
 
         // Get the orbit data  
-        const orbit = this.get_orbit_vector (id)
+        const data = this.get_data_vector (id)
 
         // Use an internal method to convert to array.
-        return this.orbit_to_array(orbit)
+        return this.data_to_array(data, this.registry.get(id).format)
         }
 
-    delete_all_orbits () 
+    delete_all_data () 
         {
         /**
          * Clears all stored data.

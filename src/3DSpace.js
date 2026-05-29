@@ -732,6 +732,11 @@ class display_space
         PLANETS.map ( (p) => this.entity_manager.add_planet (p))
         }
 
+    add_virtual (...args)
+        {
+        this.entity_manager.add_virtual (...args)
+        }
+
     get_camera_vector (axis="X")
         {
         // Return a normalized directional matrix for the requested axis.

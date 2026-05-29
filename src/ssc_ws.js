@@ -1,6 +1,7 @@
 import { EARTH_RADIUS } from './Orbit.js'
 import { COORD_Unit } from './Orbit.js'
 import { SSC_WS_ACCESS } from './constants.js'
+import { DATA_Format } from './entity_manager.js'
 import { Orbit_Data } from './App.jsx'
 
 
@@ -412,7 +413,7 @@ export class SSC_WS
 
         return orbit
         }
-    
+
     static async get_orbit_data (id, t0, t1, frequency = 2, coord_system = 'GSE', unit = COORD_Unit.RE, ref_id = null)
         {
         // const odr = new orbit_data_request (id, t0, t1, frequency, coord_system)
@@ -497,9 +498,131 @@ export class SSC_WS
                 JN.log ((SSC_WS.log_event (success)))
 
                 // Instead of returning the orbit data, store it in a central location.
-                Orbit_Data.store_orbit_data (ref_id, orbit.time, orbit.coord)
+                Orbit_Data.store_data (ref_id, orbit.time, orbit.coord, DATA_Format.COORD)
 
                 return true // Not really sure what should be returned here.
+                })
+        }
+    }
+
+export class CCMC_HAPI
+    {
+    static BASE_URL     = 'https://iswa.ccmc.gsfc.nasa.gov/hapi'
+    //static DATASET_ID   = 'SWMF2023_RT_STANDOFF_P1M'
+    //static PARAMETER    = 'mp_standoff_noon_lt'
+    static TIMEOUT      = 30000
+
+    static format_time (t)
+        {
+        // Convert JavaScript epoch to ISO 8601 UTC string for HAPI request.
+        return new Date (t).toISOString ().replace ('.000', '')
+        }
+
+    static build_url (t0, t1, dataset, parameter)
+        {
+        const start = CCMC_HAPI.format_time (t0)
+        const stop  = CCMC_HAPI.format_time (t1)
+
+        return `${CCMC_HAPI.BASE_URL}/data?id=${dataset}` +
+            `&parameters=${parameter}` +
+            `&time.min=${start}` +
+            `&time.max=${stop}` +
+            `&format=json` ;
+        }
+
+    // Note that this function does not have any concept of data cadence
+    // I may want to add it eventually to avoid storing extremely long data vectors.
+    static extract_data (json, parameter, fill_value)
+        {
+        /**
+         * Parses HAPI JSON response into parallel time and data arrays.
+         * Skips records where the parameter value is the fill value "null".
+         * @param {Object} json - Parsed HAPI JSON response.
+         * @returns {Object|null} - { time: [], data: [] } or null if response is invalid.
+         */
+        if  (! json.hasOwnProperty ('data') || ! Array.isArray (json.data))
+            {
+            return null
+            }
+
+        const time_vector = []
+        const data_vector = []
+
+        for (const record of json.data)
+            {
+            const iso_time = record [0]
+            const value    = record [1]
+
+            // Skip fill values
+            if  (value === fill_value || value === null)
+                {
+                continue
+                }
+
+            time_vector.push (new Date (iso_time).getTime ())
+            data_vector.push ({ [parameter]: parseFloat (value) })
+            }
+
+        if  (time_vector.length === 0)
+            {
+            return null
+            }
+
+        return { time: time_vector, data: data_vector }
+        }
+
+    static async get_data (id, t0, t1, dataset, parameter, fill_value = 'null' )
+        {
+        /**
+         * Fetches a parameter from the CCMC HAPI server for a specified time range, parses
+         * the response, and stores it in Orbit_Data.
+         * @param {string} id  - Entity ID used to store data in Orbit_Data.
+         * @param {number} t0  - Start time (JavaScript epoch, ms).
+         * @param {number} t1  - End time (JavaScript epoch, ms).
+         * @param {string} dataset - CCMC HAPI dataset ID
+         * @param {string} parameter - Parameter name to extract from HAPI response
+         * @return {Promise<boolean>} - Resolves to true if data is successfully 
+         *      retrieved and stored, otherwise throws an error.
+         */
+        const url       = CCMC_HAPI.build_url (t0, t1, dataset, parameter)
+        const req_time  = new Date ().getTime ()
+
+        JN.log (`Getting CCMC HAPI data for ${id} from ${CCMC_HAPI.format_time (t0)} to ${CCMC_HAPI.format_time (t1)}`)
+
+        const request = new Request (url,
+            {
+            method: 'GET',
+            mode:   'cors',
+            cache:  'default',
+            })
+
+        return SSC_WS.fetch_with_timeout (id, req_time, request, CCMC_HAPI.TIMEOUT)
+
+            .then ((res) =>
+                {
+                if  (! res.ok)
+                    {
+                    throw SSC_WS.create_http_error (res.status, id, req_time)
+                    }
+
+                return res.json ()
+                })
+
+            .then ((json) =>
+                {
+                const result = CCMC_HAPI.extract_data (json, parameter, fill_value)
+
+                if  (! result)
+                    {
+                    throw SSC_WS.create_record_error (id, req_time)
+                    }
+
+                const success = { name: 'success', t0: req_time, time: new Date ().getTime (), id: id }
+                JN.log (SSC_WS.log_event (success))
+
+                Orbit_Data.store_data (id, result.time, result.data, DATA_Format.SCALAR)
+
+                return true
                 })
         }
     }
