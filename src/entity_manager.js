@@ -2319,6 +2319,8 @@ export class entity_manager
 
     async update_actor (actor)
         {
+        console.log ("Updating actor with id: ", actor.id)
+
         if  (actor.tstart === this._start_time && actor.tend === this._end_time)
             {
             return Promise.resolve ()
@@ -2350,6 +2352,7 @@ export class entity_manager
 
                 JN.log (SSC_WS.log_event (status))
 
+                console.warn ("Removing actor with id %s due to failed update", actor.id)
                 this.remove (actor.id)
 
                 return actor.id

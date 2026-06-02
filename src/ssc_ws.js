@@ -536,14 +536,23 @@ export class CCMC_HAPI
         {
         /**
          * Parses HAPI JSON response into parallel time and data arrays.
-         * Skips records where the parameter value is the fill value "null".
+         * Skips records where the parameter value is the fill value.
+         * Returns empty arrays (not null) if the response is well-formed but
+         * contains no data records, since "no data for time range" is a 
+         * legitimate response.  Different HAPI servers use different status 
+         * codes to signal this, so we go by the empty data array.
          * @param {Object} json - Parsed HAPI JSON response.
-         * @returns {Object|null} - { time: [], data: [] } or null if response is invalid.
+         * @returns {Object|null} - { time: [], data: [], status: <code>, message: <str> }
+         *                          or null if the response is malformed.
          */
         if  (! json.hasOwnProperty ('data') || ! Array.isArray (json.data))
             {
+            console.log ("Malformed HAPI response: missing or invalid 'data' property")
             return null
             }
+
+        const status_code = json.status?.code ?? null
+        const status_msg  = json.status?.message ?? ''
 
         const time_vector = []
         const data_vector = []
@@ -563,12 +572,7 @@ export class CCMC_HAPI
             data_vector.push ({ [parameter]: parseFloat (value) })
             }
 
-        if  (time_vector.length === 0)
-            {
-            return null
-            }
-
-        return { time: time_vector, data: data_vector }
+        return { time: time_vector, data: data_vector, status: status_code, message: status_msg }
         }
 
     static async get_data (id, t0, t1, dataset, parameter, fill_value = 'null' )
@@ -600,8 +604,12 @@ export class CCMC_HAPI
 
             .then ((res) =>
                 {
-                if  (! res.ok)
+                // CCMC's HAPI server returns HTTP 404 with a valid JSON body when 
+                // no data is available for the requested time range.  Parse the 
+                // body in that case rather than throwing.
+                if  (! res.ok && res.status !== 404)
                     {
+                    console.log (`CCMC HAPI request failed with status ${res.status} ${res.statusText}`)
                     throw SSC_WS.create_http_error (res.status, id, req_time)
                     }
 
@@ -611,10 +619,20 @@ export class CCMC_HAPI
             .then ((json) =>
                 {
                 const result = CCMC_HAPI.extract_data (json, parameter, fill_value)
-
                 if  (! result)
                     {
+
                     throw SSC_WS.create_record_error (id, req_time)
+                    }
+
+                // Empty data is a legitimate, expected outcome -- the dataset is sparse 
+                // and there are gaps.  Different HAPI servers use different status codes,
+                // so we look at the data array itself rather than the status code.
+                if  (result.time.length === 0)
+                    {
+                    JN.log (`No CCMC HAPI data for ${id} in requested range (status ${result.status}: ${result.message})`)
+
+                    return false
                     }
 
                 const success = { name: 'success', t0: req_time, time: new Date ().getTime (), id: id }
