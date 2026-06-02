@@ -638,11 +638,11 @@ class display_space
 
         // Add the heliopause and bowshock meshes
         this._mhd = new MHDPause (this.scene) 
-        this._mhd.setOpacity (.4)
-        this._mhd.set_wire_frame (true)
+        this._mhd.set_opacity (.24)
+        //  this._mhd.set_wire_frame (true)
         this._bowshock = new MHDBowshock (this.scene)
-        this._bowshock.setOpacity (.4)
-        this._bowshock.set_wire_frame (true)
+        this._bowshock.set_opacity (.23)
+        // this._bowshock.set_wire_frame (true)
 
         this._mhd_visible = this._mhd.visible
         this._bowshock_visible = this._bowshock.visible

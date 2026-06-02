@@ -105,7 +105,8 @@ class MHD
         this.shape.material.vertexColors = true ;
         this.shape.material.wireframe = false ;
         this.shape.material.transparent = true
-        this.shape.material.opacity = 1
+        this.shape.material.opacity = .4
+        this.shape.material.side = THREE.DoubleSide
         this.shape.name = this.name ;
         //this.shape.geometry = new THREE.BufferGeometry () ;
 
@@ -155,8 +156,8 @@ class MHD
 
         if  (em_val === undefined)
             {
-            this.shape.material.emissive.copy (this.color) 
-            this.shape.material.emissive.multiplyScalar (.5) 
+            const emissive = this.calc_emissive_color (this.color, 1.2)
+            this.shape.material.emissive.copy (emissive)
             }
         else 
             {
@@ -377,9 +378,23 @@ class MHD
         this.shape.geometry.computeVertexNormals ()
         }
 
+
+    calc_emissive_color (diffuse, s = 1.0)
+        {
+        // Calculate a new emissive color based on the diffuse color with its lightness
+        // scaled by the given factor.   
+        const hsl = diffuse.getHSL ({})
+
+        const new_L = Math.min (1.0, hsl.l * s)
+
+        const emissive = new THREE.Color ().setHSL (hsl.h, hsl.s, new_L) 
+
+        return emissive
+        }
+
     /*respond to a change in color on the surface window */
     //setColor(Color4f c) 
-    setColor (diffuse, emissive, spec)
+    set_color (diffuse, emissive, spec)
         {
         if  (diffuse !== undefined)
             {
@@ -402,15 +417,15 @@ class MHD
 
     /*respond to a change in opacity on the surface window */
     //setOpacity(float opac) 
-    setOpacity(opac) 
+    set_opacity  (opac) 
         {
-        this.getShape().material.opacity = opac 
+        this.get_shape().material.opacity = opac 
         }
 
     /**
      * returns the shape for that geometry
      */
-    getShape() 
+    get_shape () 
         {
         return this.shape;  // Return shape3D
         }
@@ -560,7 +575,7 @@ export class MHDPause extends MHD
         // super (scene, name, 128, 128) ;
         super (scene, name, 32, 32) ;
 
-        this.set_parameters (mode, 2.0, 0., 360., "indigo" ) ;
+        this.set_parameters (mode, 2.0, 0., 360., "rgb(62, 16, 112)" ) ;
         }
     
     //MHDPause(MagnetopauseWindow magWind) 
@@ -839,7 +854,7 @@ export class MHDBowshock extends MHD
 
         //this.set_parameters (2.0, 0., 360., "violet", [0, 0.851, 0] ) ;
         //this.set_parameters (2.0, 0., 360., "hsl(300, 76.1%, 72.2%)", "hsl(300, 50%, 72.2%)" ) ;
-        this.set_parameters (mode, 2.0, 0., 360., "violet") ;
+        this.set_parameters (mode, 2.0, 0., 360., "rgb(55, 5, 68)")
         }
 
     set_parameters_from_dialog (bowWind) 
