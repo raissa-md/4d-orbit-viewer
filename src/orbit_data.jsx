@@ -50,7 +50,7 @@ export class Orbit_Data_Store
          * Note: No attempt is made to validate the data format or consistency.
          * It is assumed that the caller is providing valid data format.
          */ 
-        console.log ("Request to store data for ", id, " with ", time.length, " time points in format ", format)
+        // console.log ("Request to store data for ", id, " with ", time.length, " time points in format ", format)
 
         this.registry.set (id, 
             {
