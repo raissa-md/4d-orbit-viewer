@@ -107,7 +107,12 @@ export const MONTHS = [
     'Dec'
     ]
 
-export const BASE_ANIM_RATE = 7200.0
+// Seconds to advance the display for every second of real time
+// (2 hours per second is 7200 seconds per second)
+// This is used to control the speed of the animation.  
+export const BASE_ANIM_RATE = 7200.0 
+
+// Convert seconds to milliseconds.  Maybe should call this TICS_PER_SECOND or something.
 export const TIME_RATE = 1000
 
 export const DEF_DIALOG_WIDTH = 530

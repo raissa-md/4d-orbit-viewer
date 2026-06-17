@@ -1975,7 +1975,7 @@ class Screen_Image extends React.Component
             <video id="preview" 
                 controls 
                 muted 
-                autoplay 
+                autoPlay 
                 loop 
                 style={s}
                 ref={this.img}

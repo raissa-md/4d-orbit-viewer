@@ -2420,6 +2420,9 @@ export class entity_manager
 
     update_time (delta, loop)
         {
+        // Delta is in seconds.
+        // Loop is a boolean that indicates whether the time should 
+        // loop back to the start when it reaches the end.
         let pause = false
 
         //this._at_start = false
