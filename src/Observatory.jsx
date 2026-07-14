@@ -70,6 +70,34 @@ import Ghost_Menu from './ghost_selection.jsx'
 import { SELECT_TYPE } from './ghost_selection.jsx'
 // Imports end here.
 
+export const MAX_DATASET_PRIORITY = 1000
+
+
+// Note: Lover numbers have priority over higher numbers. 
+// So a dataset with priority 1 will be selected over a dataset with
+// priority 2 if both match the current time range.
+const CCMC_MP_STANDOFF_DATASET = 
+    [
+    {   start: new Date ("2024-05-13T15:11:57Z").getTime (), 
+        end: "",
+        name: "SWMF2023_RT_STANDOFF_P1M",
+        priority: 1
+        },
+
+    {   start: new Date ("2017-09-21T15:22:15Z").getTime (), 
+        end: new Date ("2025-08-21T15:57:45Z").getTime (),
+        name: "SWMF2011_RT_MP_STANDOFF_P5M",
+        priority: 2
+        },
+
+    {   start: new Date ("2011-09-11T04:41:47Z").getTime (), 
+        end: new Date ("2018-11-10T03:39:19Z").getTime (),
+        name: "SWMF2008_RT_MP_STANDOFF_P5M",
+        priority: 3
+        },
+
+    ]
+
 function use_min_width (disp_width)
     {
     return (disp_width < MIN_DIALOG_WIDTH * DIALOG_SPACE_FACTOR)? true : false
@@ -3770,7 +3798,8 @@ class Manager extends React.Component
                 name: 'Magnetopause Standoff Distance',
                 data_format: DATA_Format.SCALAR,
                 data_source: DATA_Source.CCMC,
-                dataset: 'SWMF2023_RT_STANDOFF_P1M',
+                //dataset: 'SWMF2023_RT_STANDOFF_P1M',
+                dataset: CCMC_MP_STANDOFF_DATASET,
                 parameter:'mp_standoff_noon_lt',
                 })
 

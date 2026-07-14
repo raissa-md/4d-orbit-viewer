@@ -13,6 +13,8 @@ import { DEF_STEP_SIZE } from './constants.js'
 import { ORTHO_TARGET_DIST } from './constants.js'
 import terminator_diffuse from './images/terminator_line.png'
 
+import { MAX_DATASET_PRIORITY } from './Observatory.jsx'
+
 //import {Lat_Lon_to_XYZ} from './geo_orbit.js'
 import {get_default_coord_sys, ρϕλ_2_xyz} from './Orbit.js'
 import {sph2rect} from './Orbit.js'
@@ -1810,9 +1812,18 @@ export class virtual_entity extends entity
             // ground stations or magnetic footprints.
             return SSC_WS.get_orbit_data (this._id, t0, t1, 12, 'GSE', COORD_Unit.RE)
             }
+
         if  (this._data_source === DATA_Source.CCMC)
             {
-            return CCMC_HAPI.get_data (this._id, t0, t1, this._dataset, this._parameter, this._null_value)
+            const dataset = this.decode_dataset (t0, t1)
+
+            // If there is no valid dataset for the selected time range
+            // this will fall down to the bottom and return a resolved promise with no data.
+
+            if  (dataset)
+                {
+                return CCMC_HAPI.get_data (this._id, t0, t1, dataset, this._parameter, this._null_value)
+                }
             }
         
         return Promise.resolve () // maybe should reject if data source is unknown?
@@ -1834,10 +1845,93 @@ export class virtual_entity extends entity
             }) ;
         }
 
+    decode_dataset (t0, t1)
+        {
+        // This should always return a string.
+
+        // Dataset can either be a single string or an array of objects, where each object contains
+        // a start time, stop time, and dataset name.  This is necessary because some providers (e.g. CCMC) 
+        // split their data into multiple datasets that each cover a specific time range.  
+
+        // First check for an empty string, which is the default value for dataset.  
+        if  (this._dataset === '')
+            {
+            return ''
+            }
+
+        // Next check for a string that is not empty, which means the dataset is a single string.  
+        if  (typeof this._dataset === 'string')
+            {
+            return this._dataset
+            }
+
+
+        // Finally, check for an array of objects.
+        if  (Array.isArray(this._dataset))
+            {
+            // console.log ('finding dataset for time range ', new Date (t0).toUTCString(), ' to ', new Date (t1).toUTCString())
+
+            // The is the highest priority dataset that matches the current time range.
+            // This is necessary because there may be multiple datasets that match the current time range,
+            // and we want to return the one that has the highest priority (lowest ordinal value). 
+            let best = MAX_DATASET_PRIORITY
+
+            // Name of the dataset that matches the current time range and has the highest priority.  
+            // This will be the dataset that is returned at the end of the function.
+            // It will be an empty string if no dataset matches the current time range.
+            let dataset = ''
+
+            // loop through the array and find the dataset that matches the current time range.  
+            // This will return the first entry it finds where the selected time range overlaps 
+            // with the time range of the dataset.  This means that if there are multiple entries
+            // that overlap with the selected time range, only the first one will be returned, not
+            // necessarily the one that overlaps the most.  
+            for (let i = 0 ; i < this._dataset.length ; i++)
+                {
+                // Replace blank dates with the current time
+                const start = (this._dataset [i].start)? this._dataset[i].start : Date.now ()
+                const end = (this._dataset[i].end)? this._dataset[i].end : Date.now ()
+
+                if  (t0 < end && t1 > start)
+                    {
+                    // console.log ('dataset ', this._dataset [i].name, ' matches the selected time range.')
+                    
+                    // Make sure there is a priority field in the dataset entry.  
+                    if  (Object.hasOwn (this._dataset [i], 'priority'))
+                        {
+                        // Check if this the best dataset we have found so far.  
+                        if  (this._dataset [i].priority < best)
+                            {
+                            best = this._dataset [i].priority
+                            dataset = this._dataset [i].name
+                            }
+                        }
+
+                    // Otherwise, if there is no priority field and no other dataset has been 
+                    // found yet, use this dataset with the lowest priority.
+                    else
+                        {
+                        if  (best === MAX_DATASET_PRIORITY)
+                            {
+                            best = MAX_DATASET_PRIORITY - 1
+                            dataset = this._dataset [i].name
+                            }
+                        }
+                    }
+                }
+
+            // console.log ('selected dataset:', dataset)
+
+            return dataset
+            }
+
+        return '' // maybe should throw an error if dataset is not in a recognized format?` 
+        }
 
     available ()
         {
         // Data is always available for virtual entities.
+        // Actually, this isn't true.  We should return an actual value here.
         return true
         }
 
