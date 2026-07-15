@@ -600,6 +600,8 @@ export class CCMC_HAPI
             cache:  'default',
             })
 
+        console.log (url)
+
         return SSC_WS.fetch_with_timeout (id, req_time, request, CCMC_HAPI.TIMEOUT)
 
             .then ((res) =>

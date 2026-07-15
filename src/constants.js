@@ -1,7 +1,7 @@
 export const TITLE = "4D Orbit Viewer"
 export const CODE_SORCERESS = "Raissa Woodland"
-export const BUILD = "0-2026.06.02.1511"
-export const BUILD_DATE = "June 2, 2026"
+export const BUILD = "0-2026.07.15.1743"
+export const BUILD_DATE = "July 15, 2026"
 // Use npm run build to build
 
 // export const SSC_WS_ACCESS = 'https://sscweb-dev.sci.gsfc.nasa.gov/'
@@ -107,7 +107,12 @@ export const MONTHS = [
     'Dec'
     ]
 
-export const BASE_ANIM_RATE = 7200.0
+// Seconds to advance the display for every second of real time
+// (2 hours per second is 7200 seconds per second)
+// This is used to control the speed of the animation.  
+export const BASE_ANIM_RATE = 7200.0 
+
+// Convert seconds to milliseconds.  Maybe should call this TICS_PER_SECOND or something.
 export const TIME_RATE = 1000
 
 export const DEF_DIALOG_WIDTH = 530

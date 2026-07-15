@@ -28,7 +28,6 @@ import { DEF_AMBIENT_INTENSITY } from './constants'
 import { DIM_AMBIENT_INTENSITY } from './constants'
 
 import { AXIS_X, AXIS_Y, AXIS_Z } from './Orbit_Display'
-import { epoch_to_date_time } from './Orbit_Display'
 
 import { get_default_unit } from './Orbit.js'
 import { convert } from './Orbit.js'
@@ -42,9 +41,9 @@ import { coord_system_to_frame } from './Orbit.js'
 import { coord_system_to_key } from './Orbit.js'
 import { ref_frame_to_planet } from './Orbit.js'
 import { JN, SSC_WS } from './ssc_ws.js'
+import  Screen_Capture from './screen_capture.js'
 import Grid from './grids';
 import Axes from './Axes.js'
-import { system_time } from './entity_manager.js'
 
 function ortho_camera_distance (d)
     {
@@ -220,264 +219,9 @@ class my_orbital_controls extends OrbitControls
         }
     }
 
-const MAX_REC_TIME = 30
-
-class Screen_Capture 
-    {
-    constructor (display, W=256, H=256, fps=30)
-        {
-        this.chunks = []
-        this.timer_id = null 
-        this.video_blob = null
-        this.req_interval = 1000 // ms
-        this.req_timer = null 
-        this.stop_flag = false
-        this.start_time = 0
-        
-
-        this.compost = new OffscreenCanvas (W, H).getContext('2d')
-        this.capture = new OffscreenCanvas (W, H).getContext('2d')
-        this._display = display 
-        this._is_video = false
-
-        this.Hd = H
-        this.Wd = W
-
-        this.stream = this._display.captureStream ()
-        this.recorder = new MediaRecorder (this.stream, { mimeType: 'video/webm' })
-
-        // Definition needs to be moved into start_recording if I want the ondataavailable()
-        // function to be used.
-        this.recorder.ondataavailable = (event) => {
-            // console.log ('video')
-            if  (event.data && event.data.size > 0) 
-                {
-                this.chunks.push (event.data)
-                }
-            };
-
-        this.event_name = "RecordStop"
-        this.quit_event = new CustomEvent (this.event_name, { detail: { answer: 42 } })
-
-        this.update_compost_bg_color = this.update_compost_bg_color.bind (this)
-        this.set_screen_capture_background = this.set_screen_capture_background.bind (this)
-        this.add_time_date = this.add_time_date.bind (this)
-        this.start_recording = this.start_recording.bind  (this)
-        this.capture_video = this.capture_video.bind (this)
-        this.start_recording = this.start_recording.bind (this)
-        this.is_recording = this.is_recording.bind (this)
-        this.get_video_data = this.get_video_data.bind (this)
-        }    
-
-    start_recording (t = MAX_REC_TIME)
-        {
-        if  (this.is_recording ())
-            {
-            return 
-            }
-
-        const timer = new Promise (resolve => {setTimeout (() => resolve (), t * 1000)})
-
-        const waiter = new Promise (resolve => {
-            function handle_stop_req (event) 
-                {
-                window.removeEventListener  (this.event_name, handle_stop_req.bind (this))
-                resolve (event);
-                }       
-
-            window.addEventListener (this.event_name, handle_stop_req);
-            }) ;
-
-        this.capture_video ()
-
-        return Promise.race ([timer, waiter])
-            .then (() => {
-                clearInterval (this.req_timer)
-                this.recorder.stop ()
-                return Promise.resolve (this.get_video_data ())
-                }) ;
-
-        }
-
- 
-    capture_video ()
-        {
-        this._is_video = true 
-        this.chunks.length = 0
-
-        this.recorder.start ()
-
-        this.start_time = new Date ().valueOf ()  
-
-        this.req_timer = setInterval(() => {
-            if  (this.is_recording ())
-                { 
-                this.recorder.requestData ()
-                }
-
-            }, this.req_interval) ;
-        }
-
-    stop_recording ()
-        {
-        if  (! this.is_recording ())
-            {
-            return
-            }
-
-        window.dispatchEvent (this.quit_event)
-
-        // This gets moved someplace else
-
-
-        return // a promise resolve?
-        }
-
-    get_video_data ()
-        {
-        return new Blob (this.chunks, {type: 'video/webm' })
-        }
-
-    is_recording () 
-        {
-        return this.recorder.state === 'recording';
-        }
-
-    update_compost_bg_color (color) 
-        {
-        // We can probably just clear the canvas here since the size isn't going to change.
-        // const compost = new OffscreenCanvas (V3DSpace.width, V3DSpace.height) 
-        this.compost.clearRect(0, 0, this.Wd, this.Hd)
-
-        this.set_screen_capture_background (color)
-        
-        this.add_time_date ()
-        }
-
-    set_screen_capture_background (clr="white")
-        {
-        // Input must be a CSS color value.
-        this.compost.beginPath ()
-        this.compost.rect (0, 0, this.Wd, this.Hd)
-        this.compost.fillStyle = clr
-        this.compost.fill()
-    
-        this.compost.drawImage (this.capture.canvas, 0, 0)
-        }
-
-    add_time_date ()
-        {
-        const display_time = epoch_to_date_time (system_time.time, true)
-
-        this.compost.font = "22px Arial"
-        this.compost.fillStyle = "white"
-        this.compost.strokeStyle = 'DarkSlateGrey'
-        this.compost.lineWidth = 2
-
-        const text = "Time: " + display_time 
-        const width = this.compost.measureText (text).width
-
-        // Draw the time and date on the image
-        this.compost.strokeText(text, (this.Wd / 2 - width / 2).toFixed (), this.Hd - 30)
-        // ctx.fillText(text, 10, compost.height - 10);
-        // ctx.fillText(text, 10, 10);
-        }
-
-    capture_image ()
-        {
-        // Take the screen shot as soon as the image is requested.
-        this._is_video = false
-
-        this.capture.drawImage (this._display, 0, 0)  // Where does this come from?
-
-
-        this.set_screen_capture_background ()
-
-        this.add_time_date ()
-
-        // this.setState ({show_image_dialog: true, compost: compost})
-
-        }
-
-    elapsed_time ()
-        {
-        return new Date ().now - this.start_time 
-        }
-
-    save_media (save_to_file, file_name)
-        {
-        if  (this._is_video)
-            {
-            return this.save_video (save_to_file, file_name)
-            }
-            
-        else
-            {
-            return this.save_image (save_to_file, file_name)
-            }
-        }
-
-    save_image (save_to_file = false, file_name = "image")
-        {
-        this.compost.canvas.convertToBlob ({type: "image/png"})
-            .then (png => {
-                if  (save_to_file)
-                    {
-                    saveAs (png, file_name)
-                    }
-                else 
-                    {
-                    window.open (URL.createObjectURL (png), 'screenshot')
-                    }
-                })
-        }
-
-    save_video (save_to_file = false, file_name = "video") 
-        {  
-        if  (save_to_file)
-            {
-            saveAs (this.get_video_data (), file_name)
-            }
-        else 
-            {
-            window.open (URL.createObjectURL (this.get_video_data ()), 'video capture')
-            }
-        }
-
-    wait (ms = 1000) 
-        {
-        return new Promise ((resolve) => setTimeout (resolve, ms))
-        }
-
-    get img_width ()
-        {
-        return this.Wd 
-        }
-
-    get img_height ()
-        {
-        return this.Hd
-        }
-
-    get img ()
-        // Actually returns the 2D context to the compost offscreen canvas
-        {
-        return this.compost.canvas
-        }
-
-    get is_video ()
-        {
-        return this._is_video
-        }
-
-    get recording ()
-        {
-        return this.is_recording ()
-        }
-
-    }
-
-
+////////////////////////////////////////////////////////////////////////////////////////////
+// Add a header here someday.
+////////////////////////////////////////////////////////////////////////////////////////////
 class display_space
     {
     constructor (display_target=null)
@@ -1396,16 +1140,19 @@ class display_space
 
     start_event_loop ()
         {
-        // Start animation
+        // Start the aniamtion loop.  This will probably only be called once.
         if  (! this._frame_id)
             {
-            this._frame_id = window.requestAnimationFrame (this.animate.bind (this))
+            this._frame_id = window.requestAnimationFrame (this.next_frame.bind (this))
             }
         }
 
     stop_event_loop ()
         {
+        // Stop the animation loop.  Should not need to be called.
         cancelAnimationFrame (this._frame_id) 
+
+        this._frame_id = 0
         }
 
     pause ()
@@ -1433,30 +1180,6 @@ class display_space
         this._rate = s
         }
 
-    update_time ()
-        {
-        if  (! this._pause)
-            {
-            // delta is the amount of time to animate over.
-            this._pause = this.entity_manager.update_time (this._delta * this._rate, this._loop)
-
-            // *** this._earth.update_axes (this.entity_manager.time, this.entity_manager.coord_system, this.entity_manager.reference_frame)
-            this.update_grids ()
-            // Convert the time into a slider position and update the slider.
-            //const new_pos = Math.round (SLIDER_RANGE * (new_time - this.props.start_time) / (this.props.end_time - this.props.start_time)) + SLIDER_LOW_VAL ;
-            this._slider_value = this.slider_position_from_time (this.entity_manager.time)
-
-            this.update_camera_to_follow ()
-
-            // Update the Spacecraft Position List
-            this.entity_manager.update_sc_pos_list ()
-
-            // Update the bowshock and magnetopause objects
-            this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-            this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
-            }
-        }
-
     slider_position (pos)
         {
         if  (pos !== this._slider_value)
@@ -1474,20 +1197,7 @@ class display_space
                 }
 
             // Convert the slider position into a time and update the time.
-            this.entity_manager.set_time (this.time_from_slider_position (this._slider_value))
-
-            // *** this._earth.update_axes (this.entity_manager.time, this.entity_manager.coord_system,this.entity_manager.reference_frame)
-            this.update_grids ()
-
-            this.update_camera_to_follow ()
-
-            // Update the bowshock and magnetopause objects
-            this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-            this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
-
-
-            // Update the Spacecraft Position List
-            // this.props.update_sc_pos_list ()
+            this.set_time (this.time_from_slider_position (this._slider_value))
             }
         
         }
@@ -1531,19 +1241,86 @@ class display_space
         this._axes_length = this._axes.axes_length
         }
 
-    animate ()
+    update_time ()
         {
-        this._delta = this._clock.getDelta ()
+        // This could be merged into the animate method.
+        if  (! this._pause)
+            {
+            // delta is the amount of time to animate over in seconds.
+            // rate is the conversion between real time seconds and animation time seconds.
+            // Default is 2 hours (7200 seconds) of animation time per real time second.
+            this._pause = this.entity_manager.update_time (this._delta * this._rate, this._loop)
 
-        //console.log (this.scene.children)
+            // *** this._earth.update_axes (this.entity_manager.time, this.entity_manager.coord_system, this.entity_manager.reference_frame)
+            this.update_grids ()
+            // Convert the time into a slider position and update the slider.
+            //const new_pos = Math.round (SLIDER_RANGE * (new_time - this.props.start_time) / (this.props.end_time - this.props.start_time)) + SLIDER_LOW_VAL ;
+            this._slider_value = this.slider_position_from_time (this.entity_manager.time)
 
-        this.update_time ()
+            this.update_camera_to_follow ()
+
+            // Update the Spacecraft Position List
+            // Why did I incorporate this into set time but not update_time?
+            this.entity_manager.update_sc_pos_list ()
+
+            // Update the bowshock and magnetopause objects
+            this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
+            this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+            }
+        }
+
+    set_time (time)
+        {
+        // Convert the slider position into a time and update the time.
+        this.entity_manager.set_time (time)
+
+        // *** this._earth.update_axes (this.entity_manager.time, this.entity_manager.coord_system,this.entity_manager.reference_frame)
+        this.update_grids ()
+
+        this.update_camera_to_follow ()
+
+        // Update the bowshock and magnetopause objects
+        this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
+        this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+
+        // Update the Spacecraft Position List
+        // this.props.update_sc_pos_list ()
+        }
+
+    animate (time = 0)
+        {
+        // Main animation loop.  This is called every frame.  
+        // It updates the time, updates the positions of all objects, and renders the scene.
+        // Could update_time be merged here?
+
+        // Check if we are free-running or if were given a specific time to update to.
+        if  (time !== 0)
+            {
+            // Update the display to the specified time.  This is currently only used for 
+            // creating videos.
+            this.set_time (time)
+             }
+
+        else
+            {
+            // Get the amount of time to animate over.  This is based on the time since the last frame.
+            // _delta is in seconds
+            this._delta = this._clock.getDelta ()
+
+        
+            // Update all objects that only change when the display not in a paused state.  
+            // This includes the time, the camera position (if following an object), 
+            // and the position of the bowshock and magnetopause objects.
+            this.update_time ()
+            }
+
         //this.cycle_strobe_shader (STROBE_SHADER_CYCLE)
 
+        // Orbital controls needs to be updated every frame to allow the user to move the camera.
         this._controls.update ()
 
-        this._renderer.render (this.scene, this._camera)
-
+        // This needs to be called here because unlike updating other parameters, the label size
+        // can change even when the display is pause due to the user scrolling the mouse.
         this.entity_manager.update_label_view_distance (
             this._camera.position, 
             this._camera.zoom, 
@@ -1553,7 +1330,15 @@ class display_space
             this._camera.fov
             )
 
-        this._frame_id =window.requestAnimationFrame (this.animate.bind(this))
+        // Render the scene with the active camera.
+        this._renderer.render (this.scene, this._camera)
+        }
+
+    next_frame ()
+        {
+        this.animate (0)
+
+        this._frame_id =window.requestAnimationFrame (this.next_frame.bind(this))
         }
 
     get_screen ()
