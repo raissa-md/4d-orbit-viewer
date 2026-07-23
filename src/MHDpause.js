@@ -197,7 +197,7 @@ class MHD
         // I have no idea what to do if the data is not available.
         if  (! Orbit_Data.entity_data_valid (MP_STANDOFF_ID))
             {
-            console.log ("MP standoff data not available for id: ", MP_STANDOFF_ID, "returning true")
+            // console.log ("MP standoff data not available for id: ", MP_STANDOFF_ID, "returning true")
 
             this.mpstandoff = null
             return true //??  This should force an update, which is what I want in this case.  I think.

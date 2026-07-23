@@ -70,10 +70,15 @@ import Ghost_Menu from './ghost_selection.jsx'
 import { SELECT_TYPE } from './ghost_selection.jsx'
 // Imports end here.
 
+// This is actually the lowest possible priority for a dataset.
+// The highest priority is 1.  
 export const MAX_DATASET_PRIORITY = 1000
 
+//http://localhost:5173/?start=20120701T000000Z&stop=20120704T000000Z&spacecraft=lro
+//https://sscweb-dev.sci.gsfc.nasa.gov/4dorbit/?start=20040701T000000Z&stop=20040703T000000Z&spacecraft=goes9
 
-// Note: Lover numbers have priority over higher numbers. 
+
+// Note: Lower numbers have priority over higher numbers. 
 // So a dataset with priority 1 will be selected over a dataset with
 // priority 2 if both match the current time range.
 const CCMC_MP_STANDOFF_DATASET = 
@@ -1767,6 +1772,27 @@ class Coordinate_System_Select extends React.Component
         this.props.update (name, index, checked)
         }
 
+    /*  Selection option for MARS if it ever gets implemented.  For now, it is commented out.
+                <div className="op-horizontal-line"></div>
+                <div className='grid-row grid-col-center op-text-subtitle'>
+                    Mars-centered Coordinate System
+                </div>
+                 <div className='grid-row op-text'>
+                    <div className="op_checkbox">
+                        <V_Checkbox
+                            label="MSO"
+                            name="mso"
+                            offset=".2em"
+                            checked={this.state.req_coord_system === COORD_System.MSO}
+                            onChange={this.local_update}
+                            />
+                    </div>
+                    <div className="op-text-light" >
+                        Mars-centered Solar Orbit
+                    </div>   
+                </div>            
+    */
+
     render ()
         {
 
@@ -3031,9 +3057,15 @@ class Base_Layout extends React.Component
 
         V3DSpace.set_coord_system (key)
 
+        // Check if the reference frame has changed.  
+        // If it has changed, call set_frame to update the reference 
+        // frame and reset the camera position.  
         const ref_frame = coord_system_to_frame (key)
 
-        this.props.set_field_boundaries (ref_frame !== REF_FRAME.EARTH)
+        if  (ref_frame !== V3DSpace.reference_frame)
+            {
+            this.props.set_frame (null, ref_frame, true)
+            }
         }
 
     save_selected_orbits ()
@@ -3616,11 +3648,11 @@ class Manager extends React.Component
         this.setState ({relative_orbits: (this.state.relative_orbits === false)? true : false,}) ;
         }
        
-    set_frame (planet="EARTH")
+    set_frame (planet="EARTH", ref_frame=null, nomsg = false)
         {
-        // This function takes a planet ID as input (maybe I should change that?)
-        // First convert it to a reference frame.
-        const frame = planet_to_ref_frame (planet)
+        // This function takes a planet ID, but only if ref_frame is null.  
+        // If ref_frame is not null, then it will use that instead of the planet ID.
+        const frame = (ref_frame !== null) ? ref_frame : planet_to_ref_frame (planet)
 
         // Do I need to check if the frame is different than the current frame before I update it?
         // I don't think I will ever call this on the same frame.
@@ -3630,7 +3662,7 @@ class Manager extends React.Component
      
         const msg = V3DSpace.reset_camera_pos (frame, this.state.relative_orbits)
 
-        if  (msg)
+        if  (msg && ! nomsg)
             {    
             V3DSpace.entity_manager.msg_portal.add_alert (ALERT.custom, msg, 7)     
             } 

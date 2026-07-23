@@ -1841,6 +1841,7 @@ export class virtual_entity extends entity
 
         return r.then (() =>
             {
+            console.log ("thened...")
             super.deploy ()
             }) ;
         }
@@ -2371,6 +2372,7 @@ export class entity_manager
                                 center: this._coord_center, 
                                 }
                             })  
+                            
             document.dispatchEvent (event)
             }
 
