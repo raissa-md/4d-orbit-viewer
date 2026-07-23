@@ -64,12 +64,6 @@ class Icon_Bar extends React.Component
             screen: null,
             }
 
-
-        document.addEventListener ("coord_change_evt", e => {
-            this.setState ({ coord_system: coord_system_to_key (e.detail.system) })
-            })
-
-
         this.get_coord_sys_icon = this.get_coord_sys_icon.bind (this)
         this.click_media = this.click_media.bind (this)
         this.setup_video_rec = this.setup_video_rec.bind (this)
@@ -130,6 +124,11 @@ class Icon_Bar extends React.Component
 
             case "SSE" :
 
+                return SSE_coord_icon
+
+            case "MSO" :
+
+                // Just a placeholder for now.  Need to create an icon for the MSO coordinate system.
                 return SSE_coord_icon
 
             default:
@@ -249,6 +248,13 @@ class Icon_Bar extends React.Component
     help_action ()
         {
         this.props.display_main_help_dialog (this.props.visible)
+        }
+    
+    componentDidMount ()
+        {
+        document.addEventListener ("coord_change_evt", e => {
+            this.setState ({ coord_system: coord_system_to_key (e.detail.system) })
+            })
         }
 
     render ()

@@ -1224,7 +1224,7 @@ class display_space
         {
         this.entity_manager.set_unit ( unit )
 
-        console.log ("setting unit: ", unit)
+        console.log (">>> setting unit: ", unit)
 
         // this._axes.set_coord_units (unit)
         // this._axes.update_axes ()

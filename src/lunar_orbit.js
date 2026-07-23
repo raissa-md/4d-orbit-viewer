@@ -21,11 +21,11 @@ class Selene
         // We will need to convert both moon_pos and sun_pos to Vector3 objects so we can do 
         // vector math with them.
 
-        // Solar position as a unit vector in GSE coordinates
-        const sun_vector = new THREE.Vector3 (1.0, 0, 0)
+        // Solar position in GSE coordinates (Sun is always along the X axis in GSE coordinates)
+        const sun_vector = new THREE.Vector3 (AU * sun_pos.R, 0, 0)
 
         // Moon position as a vector in GSE coordinates
-        const moon_vector = new THREE.Vector3 (moon_pos.x, moon_pos.y, moon_pos.z).normalize ()
+        const moon_vector = new THREE.Vector3 (moon_pos.x, moon_pos.y, moon_pos.z)
 
         // X axis vector. In SSE this is the unit vector that points from the moon to the sun.
         const x_axis = sun_vector.clone ().sub (moon_vector).normalize ()
@@ -73,11 +73,11 @@ class Selene
         // We will need to convert both moon_pos and sun_pos to Vector3 objects so we can do 
         // vector math with them.
 
-        // Solar position as a unit vector in GSE coordinates
-        const sun_vector = new THREE.Vector3 (1.0, 0, 0)
+        // Solar position in GSE coordinates (Sun is always along the X axis in GSE coordinates)
+        const sun_vector = new THREE.Vector3 (AU * sun_pos.R, 0, 0)
 
         // Moon position as a vector in GSE coordinates
-        const moon_vector = new THREE.Vector3 (moon_pos.x, moon_pos.y, moon_pos.z).normalize ()
+        const moon_vector = new THREE.Vector3 (moon_pos.x, moon_pos.y, moon_pos.z)
 
         // X axis vector. In SSE this is the unit vector that points from the moon to the sun.
         const x_axis = sun_vector.clone ().sub (moon_vector).normalize ()

@@ -4,6 +4,7 @@ import { PLANET_ORBIT_INTERVAL } from './constants.js'
 import { GEO } from "./App.jsx"
 import { HELIO } from "./App.jsx"
 import { SELENE } from "./App.jsx"
+import { MARS } from "./App.jsx"
 // import { Orbit_Data } from './App.jsx'
 
 export const MSEC_PER_SEC  = 1000
@@ -1351,6 +1352,7 @@ export const coord_system =
     HAE: 9,
     HEEQ: 10,
     SSE: 11,
+    MSO: 12,
     }
 
 export const COORD_System = Object.freeze (coord_system)
@@ -1358,6 +1360,7 @@ export const COORD_System = Object.freeze (coord_system)
 export const DEF_HELIO_COORD_SYS = COORD_System.HEE
 export const DEF_GEO_COORD_SYS = COORD_System.GSE
 export const DEF_LUNAR_COORD_SYS = COORD_System.SSE
+export const DEF_MARS_COORD_SYS = COORD_System.MSO
 
 export function get_default_coord_sys (frame)
     {
@@ -1374,6 +1377,10 @@ export function get_default_coord_sys (frame)
         case REF_FRAME.LUNAR :
 
             return DEF_LUNAR_COORD_SYS
+
+        case REF_FRAME.MARS :
+
+            return DEF_MARS_COORD_SYS
 
         default:
             return null
@@ -1519,6 +1526,10 @@ export function get_default_unit (system)
 
             return COORD_Unit.KM3
 
+        case COORD_System.MSO :
+
+            return COORD_Unit.KM3
+
         default:
 
             return COORD_Unit.RE
@@ -1572,6 +1583,10 @@ export function key_to_coord_system (key)
         case "SSE" :
 
             return COORD_System.SSE
+
+        case "MSO" :
+
+            return COORD_System.MSO
 
         default:
 
@@ -1627,6 +1642,10 @@ export function coord_system_to_key (system)
 
             return "SSE"
 
+        case COORD_System.MSO :
+
+            return "MSO"
+
         default:
 
             return null
@@ -1680,6 +1699,10 @@ export function coord_system_to_frame (system)
         case COORD_System.SSE :
 
             return REF_FRAME.LUNAR
+
+        case COORD_System.MSO :
+
+            return REF_FRAME.MARS
 
         default:
 
@@ -1848,6 +1871,13 @@ export function ANY_to_GSE (any, system = COORD_System.UNKNOWN, time)
 
     switch (system)
         {
+        // Mars-centered Solar Orbital coordinate system.  This coordinate system does not 
+        // resolve to GEI but is transformed into GSE directly.
+        case COORD_System.MSO :
+            {
+            return MSO_to_GSE (any, sunpos, time)
+            }
+
         // Selenocentric coordinate systems.  These coordinate systems do not resolve to GEI
         // but are transformed into GSE directly.
         case COORD_System.SSE :
@@ -1933,6 +1963,11 @@ export function GSE_to_ANY (gse, system = COORD_System.UNKNOWN, time)
     if  (system === COORD_System.SSE)
         {
         return GSE_to_SSE (gse, sunpos, time)
+        }
+
+    if  (system === COORD_System.MSO)
+        {
+        return GSE_to_MSO (gse, sunpos, time)
         }
 
     const gei = GSE_to_GEI (gse, sunpos)
@@ -2074,6 +2109,16 @@ export function SSE_to_GSE (...args)
     {
     return transform_coordinates (SELENE.SSE_to_GSE, ...args)
     }   
+
+export function MSO_to_GSE (...args)
+    {
+    return transform_coordinates (MARS.MSO_to_GSE, ...args)
+    }
+
+export function GSE_to_MSO (...args)
+    {
+    return transform_coordinates (MARS.GSE_to_MSO, ...args)
+    }
 
 //export function GSE_to_WS (x, y, z, normalize = 0)
 export function GSE_to_WS (...args)
