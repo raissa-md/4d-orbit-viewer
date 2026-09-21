@@ -143,9 +143,9 @@ lanl94 114,181,221 diamond solid G 180
 lanl97 154,135,43 cube solid G 180
 lro 26,126,63 sphere solid M
 mars 204,51,0 sphere solid X
-maven 204,101,35 sphere solid X
+maven 204,101,35 sphere solid L
 mercury 211,211,211 sphere solid X
-messenger 153,146,112 sphere solid X
+messenger 153,146,112 sphere solid L
 metop1b 134,223,34 sphere solid Y
 metop2a 234,123,134 sphere solid Y
 mgs * * * X

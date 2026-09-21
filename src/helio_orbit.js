@@ -5,10 +5,15 @@ import { add_vectors } from './Orbit.js'
 import { create_rotation_matrix } from './Orbit.js'
 import { transpose } from './Orbit.js'
 import { MJD } from './Orbit.js'
+import { JD } from './Orbit.js'
+import { MJD_to_DAY_HOUR } from './Orbit.js'
+import { solar_ecliptic_longitude } from './Orbit.js'
+import { J2000_Epoch } from './Orbit.js'
 import { RD90 } from './Orbit.js'
 import { RD180 } from './Orbit.js'
 import { RD270 } from './Orbit.js'
 import { PI2 } from './Orbit.js'
+import { Orbit_Data } from './App.jsx'
 import { AU } from './Orbit.js'
 
 
@@ -22,43 +27,49 @@ class Helio
     // Planetary and Space Science, 40(5), 711-717. https://doi.org/10.1016/0032-0633(92)90012-D
     constructor ()
         {
+        this.GSE_to_HEE = this.GSE_to_HEE.bind(this)
         }
 
-    GSE_to_HEE (gse, sun_pos)
+    Rotate_180_Z (vec)
+        {
+        // I am not sure I really need a matrix multiplication here, reflection around the x and y
+        // axis could be implemented with sign switches for the x and y components.
+
+        // Rotate the input vector by 180 degrees around the Z axis.
+        return [-vec[0], -vec[1], vec[2]]
+
+        // return mltply (this.Z_AXIS_ROT180, vec)
+        }
+
+    GSE_to_HEE (gse, time)
         {
         // Should we return values in Re?  If so, we will need to multiply R by AU
         // Yes we do need to return values in Re.
-        const d = [sun_pos.R * AU, 0, 0]
+        // const d = [sun_pos.R * AU, 0, 0]
+        const s = Orbit_Data.get_orbit_pos ("SUN", time, true)
 
-        let a = Array.from(Array(3), () => new Array(3)) 
+        // Check if SUN position is valid
+        if (s === null) {return null}
 
-        // Create matrix to rotate 180 degrees around the Z axis
-        a [0] [0] = -1.  // cos (180)
-        a [0] [1] = 0.0  // sin (180)
-        a [0] [2] = 0.0
+        // Convert SUN position to an array for vector addition.
+        const d = [s.x, s.y, s.z]
 
-        a [1] [0] = 0.0  // -sin (180)
-        a [1] [1] = -1.  // cos (180)
-        a [1] [2] = 0.0
+        const rotation = this.Rotate_180_Z (gse)
 
-        a [2] [0] = 0.0
-        a [2] [1] = 0.0
-        a [2] [2] = 1.0
-
-        return add_vectors (mltply (a, gse), d)
+        return add_vectors (rotation, d)
         }
 
-    HEE_to_GSE (hee, sun_pos)
+    HEE_to_GSE (hee, time)
         {
         // The same function that is used to convert GSE to HEE can also
         // be used to convert HEE to GSE
 
-        return this.GSE_to_HEE (hee, sun_pos)
+        return this.GSE_to_HEE (hee, time)
         }
 
     HAE_to_HEE (hae, sun_pos)
         {
-        // Solar longitude allong the ecliptic plus 180 degree (in radians).
+        // Solar longitude along the ecliptic plus 180 degree (in radians).
         const α = sun_pos.λ * DEG2RD + Math.PI
 
         const R = create_rotation_matrix (α, 'Z') 
@@ -68,7 +79,7 @@ class Helio
 
     HEE_to_HAE (hae, sun_pos)
         {
-        // Solar longitude allong the ecliptic plus 180 degree (in radians).
+        // Solar longitude along the ecliptic plus 180 degree (in radians).
         const α = sun_pos.λ * DEG2RD + Math.PI
 
         // Here we use the transpose of the rotation matrix we created 

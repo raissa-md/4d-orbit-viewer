@@ -25,6 +25,7 @@ import GSE_coord_icon from './images/GSE_coord_sys.png'
 import HEE_coord_icon from './images/HEE_coord_sys.png'
 import HAE_coord_icon from './images/HAE_coord_sys.png'
 import SSE_coord_icon from './images/SSE_coord_sys.png'
+import MSO_coord_icon from './images/MSO_coord_sys.png'
 import { coord_system_to_key } from './Orbit.js'
 
 import { TOP_BUTTON_STYLE } from './constants.js'
@@ -128,8 +129,7 @@ class Icon_Bar extends React.Component
 
             case "MSO" :
 
-                // Just a placeholder for now.  Need to create an icon for the MSO coordinate system.
-                return SSE_coord_icon
+                return MSO_coord_icon
 
             default:
 

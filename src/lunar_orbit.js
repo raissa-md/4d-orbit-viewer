@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { AU } from './Orbit.js'
+import { AUKM } from './Orbit.js'
 import { mltply } from './Orbit.js'
 import { add_vectors } from './Orbit.js'
 import { Orbit_Data } from './App.jsx'
@@ -22,7 +22,7 @@ class Selene
         // vector math with them.
 
         // Solar position in GSE coordinates (Sun is always along the X axis in GSE coordinates)
-        const sun_vector = new THREE.Vector3 (AU * sun_pos.R, 0, 0)
+        const sun_vector = new THREE.Vector3 (AUKM * sun_pos.R, 0, 0)
 
         // Moon position as a vector in GSE coordinates
         const moon_vector = new THREE.Vector3 (moon_pos.x, moon_pos.y, moon_pos.z)
@@ -74,7 +74,7 @@ class Selene
         // vector math with them.
 
         // Solar position in GSE coordinates (Sun is always along the X axis in GSE coordinates)
-        const sun_vector = new THREE.Vector3 (AU * sun_pos.R, 0, 0)
+        const sun_vector = new THREE.Vector3 (AUKM * sun_pos.R, 0, 0)
 
         // Moon position as a vector in GSE coordinates
         const moon_vector = new THREE.Vector3 (moon_pos.x, moon_pos.y, moon_pos.z)

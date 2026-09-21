@@ -56,9 +56,6 @@ export const UNASSIGNED_ORBIT_STYLE = 'solid'
 export const MAX_MESHLINE_PTS = 4000
 
 // number of minutes between time intervals to calculate planet positions.
-export const PLANET_ORBIT_INTERVAL = 5  // currently is 30 minutes, was 8 hours
-export const DEF_STEP_SIZE = 1000
-
 
 export const TOP_BUTTON_STYLE = {
     color: "white",
