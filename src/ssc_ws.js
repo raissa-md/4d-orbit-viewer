@@ -5,6 +5,18 @@ import { DATA_Format } from './entity_manager.js'
 import { Orbit_Data } from './App.jsx'
 
 
+export const ssc_coord_sys = {
+    GSE: 'Gse',
+    GEI: 'GeiTod',
+    GEI2000: 'Gei2000',
+    GEO: 'Geo',
+    GSM: 'Gsm', 
+    SM: 'Sm', 
+    GM: 'Gm',    
+    }
+
+export const SSC_Coord_Sys = Object.freeze (ssc_coord_sys)
+
 const SSC_REQ_HEADERS = new Headers ({
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -345,10 +357,10 @@ export class SSC_WS
             ]) ;    
         }
 
-     // Pads numbers to ensure two digit
-     static pad (number) 
+    // Pads numbers to ensure two digit
+    static pad (number) 
         {
-        if (number < 10) 
+        if  (number < 10) 
             {
             return '0' + number.toString ()
             }
@@ -414,7 +426,7 @@ export class SSC_WS
         return orbit
         }
 
-    static async get_orbit_data (id, t0, t1, frequency = 2, coord_system = 'GSE', unit = COORD_Unit.RE, ref_id = null)
+    static async get_orbit_data (id, t0, t1, frequency = 2, coord_system = SSC_Coord_Sys.GSE, unit = COORD_Unit.RE, ref_id = null)
         {
         // const odr = new orbit_data_request (id, t0, t1, frequency, coord_system)
 
@@ -451,7 +463,7 @@ export class SSC_WS
 
         // const url = url_base + '/' + id + '/' + time_1 + ',' + time_2 + '/gse/?resolutionFactor=' + frequency
         // const url = url_base + '/' + id + '/' + time_1 + ',' + time_2 + '/gse/'
-        const url = `${url_base}/${id}/${time_1},${time_2}/gse/?resolutionFactor=${frequency}&client=${client_name}`
+        const url = `${url_base}/${id}/${time_1},${time_2}/${coord_system.toLowerCase()}/?resolutionFactor=${frequency}&client=${client_name}`
 
 
         console.log (url)
@@ -498,9 +510,9 @@ export class SSC_WS
                 JN.log ((SSC_WS.log_event (success)))
 
                 // Instead of returning the orbit data, store it in a central location.
-                Orbit_Data.store_data (ref_id, orbit.time, orbit.coord, DATA_Format.COORD)
+                const r = Orbit_Data.store_data (ref_id, orbit.time, orbit.coord, DATA_Format.COORD)
 
-                return true // Not really sure what should be returned here.
+                return r // Not really sure what should be returned here.
                 })
         }
     }
@@ -640,9 +652,9 @@ export class CCMC_HAPI
                 const success = { name: 'success', t0: req_time, time: new Date ().getTime (), id: id }
                 JN.log (SSC_WS.log_event (success))
 
-                Orbit_Data.store_data (id, result.time, result.data, DATA_Format.SCALAR)
+                const r = Orbit_Data.store_data (id, result.time, result.data, DATA_Format.SCALAR)
 
-                return true
+                return r
                 })
         }
     }

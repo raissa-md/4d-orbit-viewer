@@ -12,12 +12,12 @@ import { Dropdown } from 'antd'
 import { message } from 'antd' 
 import { DownOutlined } from '@ant-design/icons'
 
-//import { MDJ_to_UTC } from './Orbit.js' 
+//import { MJD_to_UTC } from './Orbit.js' 
 import { days_in_month } from './Orbit.js'
 import { YMD_to_MJD } from './Orbit.js' 
 import { MJD_to_YMD } from './Orbit.js'
 import { MJD_to_YMD_DOY } from './Orbit.js'
-import { FORMAT_YMD } from './Orbit.js'
+// import { FORMAT_YMD } from './Orbit.js'
 import { MSEC_PER_DAY } from './Orbit.js'
 import { decompose_epoch } from './Orbit.js'
 import { compose_epoch } from './Orbit.js'
@@ -318,6 +318,7 @@ class Ghost_SC_Selection extends React.Component
         }
     }
 
+/*
 class Ghost_Time_Scroll_Entry extends React.Component
     {
     // Called by Ghost_Time_Select
@@ -402,8 +403,9 @@ class Ghost_Time_Scroll_Entry extends React.Component
             ) ;
         }
     }
+*/
 
-
+/*
 class Ghost_Time_Text_Entry extends React.Component
     {
     // Called by Ghost_Time_Select
@@ -473,7 +475,9 @@ class Ghost_Time_Text_Entry extends React.Component
             ) ;
         }
     }
+*/
 
+/*
 class Ghost_Time_Select extends React.Component
     {
     // Called by Ghost_Calendar
@@ -506,6 +510,7 @@ class Ghost_Time_Select extends React.Component
             );
         }
     }
+*/
 
 class Ghost_Date_Text_Entry extends React.Component
     {
@@ -845,6 +850,7 @@ class Ghost_Date_Calendar_Entry extends React.Component
         }
     }
 
+/*
 class Ghost_Calendar_Day_Select extends React.Component
     {
     // Called by Ghost_Calendar
@@ -858,12 +864,10 @@ class Ghost_Calendar_Day_Select extends React.Component
         {
         super (props)    
         
-        /*
-        this.state = {
-            doy_view: false,
-            date: new Date (this.props.utc)
-            }
-        */
+        // this.state = {
+        //    doy_view: false,
+        //    date: new Date (this.props.utc)
+        //    }
 
         this.state = {...decompose_epoch (this.props.utc)}
 
@@ -969,6 +973,7 @@ class Ghost_Calendar_Day_Select extends React.Component
         }
 
     }
+*/
 
 /*
 class Ghost_Calendar extends React.Component
@@ -1589,24 +1594,25 @@ class Ghost_Menu extends React.Component
 
     close_action ()
         {
-        V3DSpace.update_orbit_data ().then (failed => {
-            if  (failed.length > 0)
-                {
-                let select = [...this.state.selected]
+        V3DSpace.update_orbit_data ()
+            .then (failed => {
+                if  (failed.length > 0)
+                    {
+                    let select = [...this.state.selected]
 
-                failed.forEach (id => {
-                     
-                    const rec = this.props.sats.findIndex (sat => sat.id === id) 
-                    const i = select.indexOf (rec)
+                    failed.forEach (id => {
+                        
+                        const rec = this.props.sats.findIndex (sat => sat.id === id) 
+                        const i = select.indexOf (rec)
 
-                    select = (select.length > 0) ? [...select.slice(0,i),...select.slice(i+1)] : []
-                     
-                    this.props.sats [rec].display = false
-                    })
+                        select = (select.length > 0) ? [...select.slice(0,i),...select.slice(i+1)] : []
+                        
+                        this.props.sats [rec].display = false
+                        })
 
-                this.setState ({selected: select,})
-                }
-            })
+                    this.setState ({selected: select,})
+                    }
+                })
 
         this.props.hide_l_sidebar ()
         }

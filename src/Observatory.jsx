@@ -1772,27 +1772,6 @@ class Coordinate_System_Select extends React.Component
         this.props.update (name, index, checked)
         }
 
-    /*  Selection option for MARS if it ever gets implemented.  For now, it is commented out.
-                <div className="op-horizontal-line"></div>
-                <div className='grid-row grid-col-center op-text-subtitle'>
-                    Mars-centered Coordinate System
-                </div>
-                 <div className='grid-row op-text'>
-                    <div className="op_checkbox">
-                        <V_Checkbox
-                            label="MSO"
-                            name="mso"
-                            offset=".2em"
-                            checked={this.state.req_coord_system === COORD_System.MSO}
-                            onChange={this.local_update}
-                            />
-                    </div>
-                    <div className="op-text-light" >
-                        Mars-centered Solar Orbit
-                    </div>   
-                </div>            
-    */
-
     render ()
         {
 
@@ -1933,6 +1912,24 @@ class Coordinate_System_Select extends React.Component
                     </div>
                     <div className="op-text-light" >
                         Selenocentric Solar Ecliptic
+                    </div>   
+                </div>
+                <div className="op-horizontal-line"></div>
+                <div className='grid-row grid-col-center op-text-subtitle'>
+                    Martian Coordinate System
+                </div>
+                <div className='grid-row op-text'>
+                    <div className="op_checkbox">
+                        <V_Checkbox
+                            label="MSO"
+                            name="mso"
+                            offset=".2em"
+                            checked={this.state.req_coord_system === COORD_System.MSO}
+                            onChange={this.local_update}
+                            />
+                    </div>
+                    <div className="op-text-light" >
+                        Mars Solar Orbital
                     </div>   
                 </div>
             </div>
@@ -3822,6 +3819,7 @@ class Manager extends React.Component
             V3DSpace.register_msg_portal (this.message.current)
             V3DSpace.set_start_time (this.state.start_time)
             V3DSpace.set_end_time (this.state.end_time)
+            V3DSpace.initialize_time ()
             V3DSpace.add_all_planets ()
             // This probably should live somewhere else.
             V3DSpace.add_virtual (

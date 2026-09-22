@@ -1,4 +1,7 @@
 import { DATA_Format } from "./entity_manager.js"
+import { MSEC_PER_HOUR } from "./Orbit.js"
+import { COORD_System } from "./Orbit.js"
+import { GSE_to_ANY } from "./Orbit.js"
 
 export class Orbit_Data_Store 
     {
@@ -34,6 +37,10 @@ export class Orbit_Data_Store
             case DATA_Format.COORD:
                 return {x: 0, y: 0, z: 0}
 
+            // Currently not used, but could be useful for future extensions.
+            case DATA_Format.DUAL:
+                return {x: 0, y: 0, z: 0, aux_x: 0, aux_y: 0, aux_z: 0}
+
             default:
                 return {}
             }
@@ -56,8 +63,12 @@ export class Orbit_Data_Store
             {
             time_vector: time,
             data_vector: data,
-            format: format
+            format: format,
+            child: null,
+            type: null         // Not currently used, but could be useful for future extensions.
             });
+
+        return id
         }
 
     create_pseudo_data (id, t0, t1, cadence, format=DATA_Format.COORD)
@@ -93,14 +104,48 @@ export class Orbit_Data_Store
         return this.registry.has (id)
         }
 
-    get_data_vector (id) 
+    get_data_vector (id, system = COORD_System.GSE, start_time = null, end_time = null) 
         {
         /**
         * Retrieves the full data object for a specific entity.
         * @param {string} id 
+        * @param {number|null} start_time - If provided, only data at/after this time (UTC ms) is returned.
+        * @param {number|null} end_time - If provided, only data at/before this time (UTC ms) is returned.
         * @returns {Array|null} - An array of data objects or null if not found.
         */
-        return (this.registry.get (id)).data_vector || null
+
+        const data = (this.registry.get (id)).data_vector 
+
+        if  (!data || data.length === 0)
+            {
+            return null
+            }
+
+        // Get the time vector as we will need it for coordinate transformations and/or time filtering.
+        const time_vector = (this.registry.get (id)).time_vector
+
+        // GSE is the default coordinate system.  So just use the data as is; otherwise transform.
+        const result = (system === COORD_System.GSE)? data : GSE_to_ANY (data, system, time_vector)
+
+        if  (start_time === null && end_time === null)
+            {
+            return result
+            }
+
+        const filter = []
+
+        for (let i = 0; i < time_vector.length; i++)
+            {
+            const pre_test = start_time === null || time_vector[i] > start_time
+            const post_test = end_time === null || time_vector[i] < end_time
+
+            if (pre_test && post_test)
+                {
+                filter.push (result[i])
+                }
+            }
+
+        return filter
         }
 
     /* Old Version.
@@ -120,14 +165,17 @@ export class Orbit_Data_Store
         }
     */  
    
-    get_pos (id, index, center=null)
+    get_pos (id, index, center=null, interpolate=true)
         {
         /**
-         * Retrieves the position of the entity with id relative to center at a
-         * specific index. Does not perform bounds checking on index.
+         * Retrieves the position of the entity with id relative to center at a specific 
+         * index. Does not perform bounds checking on index.  Does not do interpolation for
+         * the target object, but will do interpolation for the center object if requested.
+         * If center is null, returns absolute position.
          * @param {string} id 
          * @param {number} index 
          * @param {string|null} center - The ID of the center body. If null, uses the origin (0,0,0).
+         * @param {boolean} interpolate - Whether to interpolate the center position.
          * @returns {Object|null} - Relative position {x, y, z} or null if data is invalid.
          */
 
@@ -137,8 +185,18 @@ export class Orbit_Data_Store
             return null 
             }
         
+        // Get the time at the specified index.  
+        // This may be used for interpolation of the center position or coordinate transformations.
+        const time_at_index = this.get_time (id, index)
+
         // Start with the position of the target body at the specified index.
-        const orbit = this.registry.get(id).data_vector[index] || null
+        let orbit = this.registry.get(id).data_vector[index] || null
+
+        // Convert the target orbit position to the requested coordinate system if necessary.
+        // if  (system !== COORD_System.GSE)
+        //     {
+        //     orbit = GSE_to_ANY (orbit, system, time_at_index)
+        //       }
 
         // Check if center is specified and if data exists. If not, ignore the center.
         if  (center === null || ! this.entity_data_valid (center))
@@ -146,12 +204,8 @@ export class Orbit_Data_Store
             return orbit
             }
 
-        // Get the time at the specified index.  
-        // This is needed to get the center position, which may require interpolation.
-        const time_at_index = this.get_time (id, index)
-
         // Get the position of the center body at the same time.  This may require interpolation.
-        const center_pos = this.get_orbit_pos (center, time_at_index, true)
+        const center_pos = this.get_orbit_pos (center, time_at_index, interpolate)
 
         // Calculate and return the relative position
         return {
@@ -161,7 +215,7 @@ export class Orbit_Data_Store
             }
         }
 
-    get_value_at_index (id, index)
+    get_value_at_index (id, index, system = COORD_System.GSE)
         {
         /**
          * Retrieves the value at a specific index for an entity.
@@ -171,6 +225,15 @@ export class Orbit_Data_Store
          * @returns {number|null} - Value at the specified index or null if not found.
          */
         const value = this.registry.get(id).data_vector[index] || null
+
+        // Convert the target orbit position to the requested coordinate system if necessary.
+        if  (system !== COORD_System.GSE && value !== null)
+            {
+            // Get the time at the specified index for the entity.
+            const time = this.get_time (id, index)
+
+            return GSE_to_ANY (value, system, time)
+            }
 
         return value
         }   
@@ -187,13 +250,13 @@ export class Orbit_Data_Store
         return length
         }
 
-    get_time (id, index)
+    get_time (id, index = 0)
         {
         /**
          * Retrieves the time at a specific index for an entity.
          * Does not perform bounds checking on index.
          * @param {string} id 
-         * @param {number} index 
+         * @param {number} index - The index of the time value to retrieve. Defaults to 0.
          * @returns {number|null} - Time (UTC milliseconds since epoch) or null if not found.
          */
         const time = this.registry.get(id).time_vector[index] || null
@@ -215,12 +278,14 @@ export class Orbit_Data_Store
         }
 
 
-    get_relative_orbit_data (id, center=null)
+    get_relative_orbit_data (id, center=null, system = COORD_System.GSE, start_time = null, end_time = null)
         {
         /**
          * Retrieves the orbit data of an entity relative to center.
          * @param {string} id - The ID of the target spacecraft or planet.
          * @param {string|null} center - The ID of the center body. If null, uses the origin (0,0,0).
+         * @param {number|null} start_time - If provided, only data at/after this time (UTC ms) is returned.
+         * @param {number|null} end_time - If provided, only data at/before this time (UTC ms) is returned.
          * @returns {Array|null} - Relative orbit position data or null if data is invalid.
          */
 
@@ -241,20 +306,20 @@ export class Orbit_Data_Store
             {
             // console.log ("Returning absolute orbit data for ", id)
 
-            return this.get_data_vector (id)
+            return this.get_data_vector (id, system, start_time, end_time)
             }
 
         // Check if center data exists. If not, ignore the center.
         if  (! this.entity_data_valid (center))
             {
-            return this.get_data_vector (id)
+            return this.get_data_vector (id, system, start_time, end_time)
             }
 
         // Get absolute orbit data
-        const target_orbit = this.get_data_vector (id)
+        const target_orbit = this.get_data_vector (id, system, start_time, end_time)
 
         // Get time data
-        const time = this.get_time_vector (id)
+        const time = this.get_time_vector (id, start_time, end_time)
 
         // Calculate relative orbit data
         const relative_orbit = []
@@ -274,14 +339,27 @@ export class Orbit_Data_Store
         return relative_orbit 
         }
 
-    get_time_vector (id)
+    get_time_vector (id, start_time = null, end_time = null)
         {
         /**
          * Retrieves the time vector for a specific entity.
          * @param {string} id 
+         * @param {number|null} start_time - If provided, only times at/after this time (UTC ms) are returned.
+         * @param {number|null} end_time - If provided, only times at/before this time (UTC ms) are returned.
          * @returns {Array|null} - Array of timestamps (UTC milliseconds since epoch) or null if not found.
          */
-        return (this.registry.get (id)).time_vector || null
+        const time_vector = (this.registry.get (id)).time_vector || null
+
+        if  (! time_vector || (start_time === null && end_time === null))
+            {
+            return time_vector
+            }
+
+        const filter = time_vector.filter ((t) => {
+            return (start_time === null || t > start_time) && (end_time === null || t < end_time)
+            })
+
+        return filter
         }
 
     delete_data (id) 
@@ -355,12 +433,14 @@ export class Orbit_Data_Store
         return time
         }
 
+    ///* Need to refactor every method that invokes this one *///
     interpolate_pos_at_index (id, index)
         {
         /** 
          * Interpolates position at a specific index for an entity.
          * Index is a floating-point number; the integer part is the lower bound index,
          * and the fractional part is used for interpolation.
+         * Note: This method always returns a position in the native coordinate system (GSE).
          * @param {string} id 
          * @param {number} index 
          * @returns {Object|null} - Interpolated position {x, y, z} or null if data is invalid.
@@ -385,6 +465,12 @@ export class Orbit_Data_Store
         // Check if this the last index or beyond.  
         // If so, return the position at the last index to avoid out-of-bounds errors.
         const max_index = this.get_length (id) - 1
+
+        if  (id === 'MOON')
+            {
+            //console.log ("Max index for ", id, " is ", max_index, " i = ", i, " index = ", index)
+            //console.log (this.registry.get(id).data_vector)
+            }
 
         if  (i >= max_index)
             {
@@ -454,7 +540,6 @@ export class Orbit_Data_Store
                 }
             }   
 
-
         // Calculate fractional index
         const t0 = time_array [i]
         const t1 = time_array [i + 1]    
@@ -495,8 +580,131 @@ export class Orbit_Data_Store
             z: p0.z + t * (p1.z - p0.z)
             };
         }
+    // Ideally, this should be done using coordinates in a solar inertial reference frame, 
+    // but for now we will use GSE coordinates to do the calculations.
+    get_velocity_normal (id, time, interpolate = null, system = COORD_System.GSE)
+        {
+        /**
+         * Estimates the velocity of an entity at the specified time by calculating the 
+         * change in position between previous and next positions.  This is a simple numerical 
+         * differentiation. 
+         * Note: If center is not specified, velocity normals are calculated in a geocentric frame
+         * of reference. Specify the SUN as the center for a heliocentric frame.
+         * @param {string} id - The ID of the target spacecraft or planet.
+         * @param {number} time - UTC milliseconds since epoch.
+         * // not used @param {string|null} center - Optional ID of the center body for relative velocity calculations. 
+         * @param {string|null} new_id - Optional new ID for the stored velocity normals. If null, a default ID is generated.
+         * @returns {string|null} - The new ID of the stored velocity normals or null if data is invalid.
+         */
 
-    get_orbit_pos (id, time, interpolate=true, center=null) 
+        
+        // Make sure target data exists
+        if  (! this.entity_data_valid (id))
+            {
+            return null 
+            }
+
+        // Check that the data is in COORD format. If not, return null.
+        if  (this.registry.get(id).format !== DATA_Format.COORD)
+            {
+            return null 
+            }
+
+        // Find the appropriate index for the given time.  Note, index is a floating-point number.
+        const time_before = Math.max (time - MSEC_PER_HOUR, this.get_time (id))
+        const time_after = Math.max (time + MSEC_PER_HOUR, this.get_time (id))
+
+        // Get the indices for the time before and after the specified time.
+        // Fortunately, the time_to_index method can handle times outside the range of the time vector.
+        const index_t0 = this.time_to_index (id, time_before, interpolate)  
+        const index_t1 = this.time_to_index (id, time_after, interpolate)  
+
+        // Calculate before and after positions for numerical differentiation.
+        let before 
+        let after
+
+        if  (interpolate)
+            {
+            // Perform interpolation logic here if needed.
+            before = this.interpolate_pos_at_index (id, index_t0)
+            after = this.interpolate_pos_at_index (id, index_t1)
+            }
+        else
+            {
+            before = this.get_value_at_index (id, index_t0)
+            after = this.get_value_at_index (id, index_t1)
+            }
+
+        // Check if center is specified and if data exists. If not, ignore the center.
+        /* Center-relative velocity calculation is currently disabled. //
+        if  (center !== null && this.entity_data_valid (center))
+            {
+            // Find the appropriate indices for the center body at the same times.
+            // We need to interpolate the center position, since planets may have different 
+            // time vectors.
+            const center_t0 = this.time_to_index (center, time_before, true)
+            const center_t1 = this.time_to_index (center, time_after, true)
+
+            const center_before = this.interpolate_pos_at_index (center, center_t0)
+            const center_after = this.interpolate_pos_at_index (center, center_t1)
+
+            // Adjust the before and after positions to be relative to the center.
+            before.x -= center_before.x
+            before.y -= center_before.y
+            before.z -= center_before.z
+
+            after.x -= center_after.x
+            after.y -= center_after.y
+            after.z -= center_after.z
+            }
+        */
+
+        if  (system !== COORD_System.GSE)
+            {   
+
+            before = GSE_to_ANY (before, system, time_before)
+            after = GSE_to_ANY (after, system, time_after)
+
+            // Check if the conversion to the target coordinate system was successful.
+            if  (before === null || after === null)
+                {
+                return null
+                }
+            }
+
+        const dx = after.x - before.x
+        const dy = after.y - before.y
+        const dz = after.z - before.z
+
+        const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
+
+        // Create a new data object for the velocity normal and populate it.
+        const vel = {...this.create_empty_data_obj (DATA_Format.COORD)}
+
+        // Insert the velocity vector components into the new data object.
+        vel.x = dx
+        vel.y = dy
+        vel.z = dz
+
+        // Normalize the velocity vector to get the velocity normal.  
+        // If length is zero, create a zero vector.
+        if (length !== 0)
+            {
+            vel.x /= length
+            vel.y /= length
+            vel.z /= length
+            }
+        else
+            {
+            vel.x = 0
+            vel.y = 0
+            vel.z = 0
+            }
+
+        return vel
+        }
+
+    get_orbit_pos (id, time, interpolate=true, system = COORD_System.GSE) 
         {
         /**
          * Uses binary search to find the correct interval and interpolates the position.
@@ -509,6 +717,7 @@ export class Orbit_Data_Store
         // Make sure target data exists
         if  (! this.entity_data_valid (id))
             {
+            //console.log ("Entity data for id = " + id + " is not valid.")
             return null
             }
 
@@ -521,10 +730,13 @@ export class Orbit_Data_Store
         // Find the appropriate index for the given time.  Note, index is a floating-point number.
         const index = this.time_to_index (id, time, interpolate)
 
+        //console.log ("object id = " + id + ". Interpolate = " + interpolate + ". Index for time " + time + " is " + index)
+
         // If no interpolation is needed, return the position at the nearest index
         if  (! interpolate)
             {
-            return this.get_pos (id, Math.floor(index), center)
+            // We can only return a position without reference to a center.
+            return this.get_pos (id, Math.floor(index), null)
             }
 
         return this.interpolate_pos_at_index (id, index)
@@ -654,12 +866,14 @@ export class Orbit_Data_Store
         return result
         }
 
-    get_data_as_array (id)
+    get_data_as_array (id, start_time = null, end_time = null)
         {
         /** 
          * Returns entity data as a flattened array of values.  For orbit data, the format will be
          * [x1, y1, z1, x2, y2, z2, ...].
          * @param {string} id - The ID of the target entity.
+         * @param {number|null} start_time - If provided, only data at/after this time (UTC ms) is included.
+         * @param {number|null} end_time - If provided, only data at/before this time (UTC ms) is included.
          * @returns {Array|null} - Flattened array of data values or null if id is invalid.
          */
 
@@ -670,7 +884,7 @@ export class Orbit_Data_Store
             }
 
         // Get the orbit data  
-        const data = this.get_data_vector (id)
+        const data = this.get_data_vector (id, COORD_System.GSE, start_time, end_time)
 
         // Use an internal method to convert to array.
         return this.data_to_array(data, this.registry.get(id).format)

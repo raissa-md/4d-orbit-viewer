@@ -1,14 +1,21 @@
 import * as THREE from 'three'
 import { AU } from './Orbit.js'
+import { COORD_System } from './Orbit.js'
+import { get_planet_inclination } from './planet_data.js'
+import { get_planet_omega } from './planet_data.js'
+import { GSE_to_ANY } from './Orbit.js'
 import { mltply } from './Orbit.js'
+import { DEG2RD } from './Orbit'
 import { add_vectors } from './Orbit.js'
 import { Orbit_Data } from './App.jsx'
 
-/* This module implements Mars Solar Ecliptic (MSO) coordinate conversion class. 
+/* This module implements Mars-centered Solar Orbital (MSO) coordinate conversion class. 
 MSO coordinates are a right-handed coordinate system with the origin at the center of Mars.
 The X axis points from Mars to the Sun 
-The Z axis is perpendicular to the plane formed by the Sun and Mars (same as GSE Z axis).
-The Y axis is perpendicular to both the X and Z axes.
+The Y axis, is in the Mars Orbit Plane, which is approximately opposite to Orbital Motion Direction
+The Z axis is perpendicular to both the X and Y axes.
+See:
+https://data.nasa.gov/dataset/maven-magnetometer-mag-magnetic-field-and-orbital-position-sun-state-and-payload-coordinat
 The MSO coordinate system is used for modeling the Martian magnetosphere and solar wind interactions with Mars. 
 */  
 
@@ -16,40 +23,38 @@ class Mars
     {
     constructor ()
         {
+        // Just doing this to enable debugging the transformation functions.
+        this.HAE_to_MSO = this.HAE_to_MSO.bind(this)
+        this.MSO_to_HAE = this.MSO_to_HAE.bind(this)
         }
 
-    GSE_to_MSO (gse, sun_pos, time)
+    HAE_to_MSO (hae, time)
         {
-        // Note that gse is an array, time is a scalar, but sun_pos is an 
-        // object with multiple properties, but we only care about x, y, z.
+        // Note that hae is an array [x, y, z], time is a scalar.
 
-        // Get the position of Mars in GSE coordinates at the requested time.
-        const mars_pos = Orbit_Data.get_orbit_pos ("MARS", time, true)
-
-        // We will need to convert both mars_pos and sun_pos to Vector3 objects so we can do 
-        // vector math with them.
-
-        // Solar position in GSE coordinates (Sun is always along the X axis in GSE coordinates)
-        const sun_vector = new THREE.Vector3 (AU * sun_pos.R, 0, 0)
-
-        // Mars position as a vector in GSE coordinates
-        const mars_vector = new THREE.Vector3 (mars_pos.x, mars_pos.y, mars_pos.z)
+        // Get the position of Mars in HAE coordinates at the requested time.
+        const mars_pos = GSE_to_ANY (Orbit_Data.get_orbit_pos ("MARS", time, true), COORD_System.HAE, time)
 
         // X axis vector. In MSO this is the unit vector that points from Mars to the sun.
-        const x_axis = sun_vector.clone ().sub (mars_vector).normalize ()
+        const x_axis = new THREE.Vector3 (mars_pos.x, mars_pos.y, mars_pos.z).normalize ().negate ()
+
+        // Get the normalized velocity vector of mars with respect to the sun.
+        const mars_v = Orbit_Data.get_velocity_normal ("MARS", time, true, COORD_System.HAE)
+
+        // Approximate Y axis (opposite orbital motion) used only to establish the orbit plane; not guaranteed orthogonal to x_axis.
+        const y_axis_raw = new THREE.Vector3 (mars_v.x, mars_v.y, mars_v.z).negate ()
 
         // Z axis vector. In MSO this is the unit vector that is perpendicular to the plane
-        // formed by the sun and Mars. Because we are transforming from GSE to MSO, we can use a
-        // unit vector that points in the same direction as the GSE Z axis.
-        const z_axis = new THREE.Vector3 (0, 0, 1)
+        // formed by the sun and Mars.
+        const z_axis = new THREE.Vector3 ().crossVectors (x_axis, y_axis_raw).normalize ()
 
-        // Y axis vector. In MSO this is the unit vector that is perpendicular to both the X and Z axes.
+        // Re-derive Y from the orthogonal X/Z pair so the basis is orthonormal.
         const y_axis = new THREE.Vector3 ().crossVectors (z_axis, x_axis).normalize ()
 
         // Now create a transformation matrix that will convert from GSE to MSO coordinates. 
         // The columns of this matrix are the X, Y, and Z axis vectors we just calculated.
                 
-        // Create matrix to transform from GSE to MSO coordinates
+        // Create matrix to transform from HAE to MSO coordinates
         let a = Array.from(Array(3), () => new Array(3)) 
 
         a [0] [0] = x_axis.x
@@ -64,41 +69,39 @@ class Mars
         a [2] [1] = z_axis.y
         a [2] [2] = z_axis.z
 
-        // Return the GSE coordinates transformed to MSO coordinates by multiplying the transformation
-        // matrix by the GSE coordinates.
-        const relative_position = [gse[0] - mars_pos.x, gse[1] - mars_pos.y, gse[2] - mars_pos.z]
-        return mltply (a, relative_position)        
+        // Return the HAE coordinates transformed to MSO coordinates by multiplying the transformation
+        // matrix by the HAE coordinates.
+        const relative_position = [hae[0] - mars_pos.x, hae[1] - mars_pos.y, hae[2] - mars_pos.z]
+
+        const mso = mltply (a, relative_position)  // HAE to MSO
+
+        return mso 
         }
 
-    MSO_to_GSE (mso, sun_pos, time)
+    MSO_to_HAE (mso, time)
         {
-        // Note that mso is an array, time is a scalar, but sun_pos is an 
-        // object with multiple properties, but we only care about x, y, z.
+        // Note that mso is an array [x, y, z], time is a scalar.
 
-        // Get the position of Mars in GSE coordinates at the requested time.  
-        const mars_pos = Orbit_Data.get_orbit_pos ("MARS", time, true)
+        // Get the position of Mars in HAE coordinates at the requested time.
+        const mars_pos = GSE_to_ANY (Orbit_Data.get_orbit_pos ("MARS", time, true), COORD_System.HAE, time)
 
-        // We will need to convert both mars_pos and sun_pos to Vector3 objects so we can do 
-        // vector math with them.
+         // X axis vector. In MSO this is the unit vector that points from Mars to the sun.
+        const x_axis = new THREE.Vector3 (mars_pos.x, mars_pos.y, mars_pos.z).normalize ().negate ()
 
-        // Solar position in GSE coordinates (Sun is always along the X axis in GSE coordinates)
-        const sun_vector = new THREE.Vector3 (AU * sun_pos.R, 0, 0)
- 
-        // Mars position as a vector in GSE coordinates
-        const mars_vector = new THREE.Vector3 (mars_pos.x, mars_pos.y, mars_pos.z)
+        // Get the normalized velocity vector of mars with respect to the sun.
+        const mars_v = Orbit_Data.get_velocity_normal ("MARS", time, true, COORD_System.HAE)
 
-        // X axis vector. In MSO this is the unit vector that points from Mars to the sun.
-        const x_axis = sun_vector.clone ().sub (mars_vector).normalize ()
+        // Approximate Y axis (opposite orbital motion) used only to establish the orbit plane; not guaranteed orthogonal to x_axis.
+        const y_axis_raw = new THREE.Vector3 (mars_v.x, mars_v.y, mars_v.z).negate ()
 
         // Z axis vector. In MSO this is the unit vector that is perpendicular to the plane
-        // formed by the sun and Mars. Because we are transforming from GSE to MSO, we can use a
-        // unit vector that points in the same direction as the GSE Z axis.
-        const z_axis = new THREE.Vector3 (0, 0, 1)
+        // formed by the sun and Mars.
+        const z_axis = new THREE.Vector3 ().crossVectors (x_axis, y_axis_raw).normalize ()
 
-        // Y axis vector. In MSO this is the unit vector that is perpendicular to both the X and Z axes.
+        // Re-derive Y from the orthogonal X/Z pair so the basis is orthonormal.
         const y_axis = new THREE.Vector3 ().crossVectors (z_axis, x_axis).normalize ()
 
-        // Now create a transformation matrix that will convert from MSO to GSE coordinates. 
+        // Now create a transformation matrix that will convert from GSE to MSO coordinates. 
         // The columns of this matrix are the X, Y, and Z axis vectors we just calculated.
                 
         // Create matrix to transform from MSO to GSE coordinates

@@ -1,7 +1,7 @@
 export const TITLE = "4D Orbit Viewer"
 export const CODE_SORCERESS = "Raissa Woodland"
-export const BUILD = "0-2026.07.23.1548"
-export const BUILD_DATE = "July 23, 2026"
+export const BUILD = "0-2026.09.21.1750"
+export const BUILD_DATE = "September 21, 2026"
 // Use npm run build to build
 
 // export const SSC_WS_ACCESS = 'https://sscweb-dev.sci.gsfc.nasa.gov/'
@@ -56,9 +56,6 @@ export const UNASSIGNED_ORBIT_STYLE = 'solid'
 export const MAX_MESHLINE_PTS = 4000
 
 // number of minutes between time intervals to calculate planet positions.
-export const PLANET_ORBIT_INTERVAL = 5  // currently is 30 minutes, was 8 hours
-export const DEF_STEP_SIZE = 1000
-
 
 export const TOP_BUTTON_STYLE = {
     color: "white",

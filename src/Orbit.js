@@ -1,6 +1,5 @@
 //import moment from 'moment' 
 import * as THREE from "three"
-import { PLANET_ORBIT_INTERVAL } from './constants.js' 
 import { GEO } from "./App.jsx"
 import { HELIO } from "./App.jsx"
 import { SELENE } from "./App.jsx"
@@ -15,7 +14,10 @@ export const MSEC_PER_YEAR = MSEC_PER_DAY * 365.25
 export const MJD_START     = 'November 17, 1858 00:00:00 GMT+00:00' ;
 export const DAYS_PER_CENT = 36525 ;
 export const JD_UNIX_EPOCH = 2440587.5   // 2440587.5
-export const SIDEREAL_DAY  = 86400000.   // Seconds in a solar day.  Not sure why I named it SIDEREAL_DAY
+// Julian Date of the J2000.0 epoch (2000 January 1, 12:00 TT).
+export const J2000_JD = 2451545.0
+// Arcseconds to radians.
+export const AS2RD = Math.PI / (180.0 * 3600.0)
 export const DEG2RD = Math.PI / 180.
 export const RD2DEG = 180. / Math.PI
 export const PI2 = 2. * Math.PI
@@ -33,9 +35,9 @@ export const AU = AUKM / EARTH_RADIUS // ~23454.7 Nominal Earth Radii
 
 export function JD (utc)
     {
-    // Return the Julian Day Number
-    // Requires UTC time.
-    return ( utc / SIDEREAL_DAY ) + JD_UNIX_EPOCH
+    // Return the Julian Date
+    // Requires unix epoch time in milliseconds.
+    return ( utc / MSEC_PER_DAY ) + JD_UNIX_EPOCH
     }
 
 export function MJD (utc)
@@ -43,6 +45,17 @@ export function MJD (utc)
     // Return the Modified Julian Day Number
     // Requires UTC time.
     return JD (utc) - 2400000.5
+    }
+
+export function MJD_to_DAY_HOUR (mjd)
+    {
+    // Convert a Modified Julian Day Number to a day number and hour   
+    // Hour is a floating point number between 0 and 24.     
+    const day = Math.floor (mjd)
+
+    const hour = (mjd - day) * 24.0
+
+    return {day, hour}
     }
 
 export function decompose_epoch (utc)
@@ -69,17 +82,17 @@ export function MJDHMS_to_str (mjd)
     {
     // Convert each component of a MJD time to a string
 
-    mjd.hour = mjd.hour.toString ().padStart (2, '0')
-    mjd.min = mjd.min.toString ().padStart (2, '0')
-    mjd.sec = mjd.sec.toString ().padStart (2, '0')
-    mjd.msec = mjd.msec.toString ().padStart (3, 0)
+    const hour = mjd.hour.toString ().padStart (2, '0')
+    const min  = mjd.min.toString ().padStart (2, '0')
+    const sec  = mjd.sec.toString ().padStart (2, '0')
+    const msec = mjd.msec.toString ().padStart (3, '0')
 
-    mjd.mjd = String (mjd.mjd)
+    const mjd_str = String (mjd.mjd)
 
-    return mjd 
+    return {mjd: mjd_str, hour, min, sec, msec} 
     }
   
-export function MDJ_to_UTC (mjd)
+export function MJD_to_UTC (mjd)
     {
     // Calculate Julian Day from MJD
     const jd = mjd + 2400000.5
@@ -88,9 +101,14 @@ export function MDJ_to_UTC (mjd)
     const days_since_epoch = jd - JD_UNIX_EPOCH
 
     // Convert days to milliseconds
-    const utc = days_since_epoch * SIDEREAL_DAY
+    const utc = days_since_epoch * MSEC_PER_DAY
 
     return utc
+    }
+
+export function arg_exists (v, dflt)
+    {
+    
     }
 
 export function compose_epoch (...args)
@@ -103,29 +121,31 @@ export function compose_epoch (...args)
 
     if  (args.length === 1 && typeof args[0] === 'object')
         {
-        args [0].mjd  && (mjd = Number (args [0].mjd))
-        args [0].hour && (hour = Number (args [0].hour))
-        args [0].min  && (min = Number (args [0].min))
-        args [0].sec  && (sec = Number (args [0].sec))
-        args [0].msec && (msec = Number (args [0].msec))            
+        args [0].mjd  !== undefined && (mjd = Number (args [0].mjd))
+        args [0].hour !== undefined && (hour = Number (args [0].hour))
+        args [0].min  !== undefined && (min = Number (args [0].min))
+        args [0].sec  !== undefined && (sec = Number (args [0].sec))
+        args [0].msec !== undefined && (msec = Number (args [0].msec))            
         }
 
     else
         {
-        args [0] && (mjd = Number (args [0]))
-        args [1] && (hour = Number (args [1]))
-        args [2] && (min = Number (args [2]))
-        args [3] && (sec = Number (args [3]))
-        args [4] && (msec = Number (args [4]))                
+        args [0] !== undefined && (mjd = Number (args [0]))
+        args [1] !== undefined && (hour = Number (args [1]))
+        args [2] !== undefined && (min = Number (args [2]))
+        args [3] !== undefined && (sec = Number (args [3]))
+        args [4] !== undefined && (msec = Number (args [4]))                
         }
 
-    const utc = MDJ_to_UTC (mjd) + HHMMSS_to_msec (hour, min, sec, msec)
+    const utc = MJD_to_UTC (mjd) + HHMMSS_to_msec (hour, min, sec, msec)
     
     return utc
     }
 
 export function days_in_month (year, month)
     {
+    // month is an integer from 0 to 11.  
+
     // Determine if the year is a leap year
     const is_leap_year = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)
   
@@ -143,6 +163,8 @@ export function days_in_month (year, month)
 
 export function YMD_to_DOY (year, month, day) 
     {
+    // month is an integer from 0 to 11.
+
     // alert ("year: " + year + " month: " + month + " day: " + day)
     // Determine if the year is a leap year
     const is_leap_year = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)
@@ -171,22 +193,24 @@ export function YMD_to_DOY (year, month, day)
 
 export function YMD_to_MJD (...args)
     {
+    // Note that month is an integer between 0 and 11. 
+
     let year = 0 
     let month = 0
     let day = 0 
 
     if  (args.length === 1 && typeof args[0] === 'object')
         {
-        args [0].year  && (year = Number (args [0].year))
-        args [0].month && (month = Number (args [0].month))
-        args [0].day  && (day = Number (args [0].day))
+        args [0].year  !== undefined && (year = Number (args [0].year))
+        args [0].month !== undefined && (month = Number (args [0].month))
+        args [0].day   !== undefined && (day = Number (args [0].day))
         }
 
     else
         {
-        args [0] && (year = Number (args [0]))
-        args [1] && (month = Number (args [1]))
-        args [2] && (day = Number (args [2]))
+        args [0] !== undefined && (year = Number (args [0]))
+        args [1] !== undefined && (month = Number (args [1]))
+        args [2] !== undefined && (day = Number (args [2]))
         }
 
     // Need to to this since JavaScript month runs 0-11
@@ -216,7 +240,7 @@ export function YMD_to_MJD (...args)
 
 export function MJD_to_YMD (mjd)
     {
-    const d = new Date (MDJ_to_UTC (mjd))
+    const d = new Date (MJD_to_UTC (mjd))
 
     const r = {
         year: d.getUTCFullYear (),
@@ -236,6 +260,7 @@ export function MJD_to_YMD_DOY (mjd)
     return r
     }
 
+/*
 export function FORMAT_YMD (ymd) // Should be renamed
     {
     const r = {year: "", month: "", day: ""}
@@ -257,67 +282,19 @@ export function FORMAT_YMD (ymd) // Should be renamed
 
     return r
     }
+*/
 
 export function J2000 (jd)
     {
-    // Number of days since Greenwich noon, Terrestrial Time, on 1 January 2000
+    // Number of days since J2000.0 
     // This value may be negative 
-    return jd - 2451543.5
+    return jd - 2451545.0
     }
 
-export function eccentricity_anomaly  (M, ε, error=.005)
+export function J2000_Epoch (jd)
     {
-    let E0 = M +  ε * Math.sin (M) * (1 + ε * Math.cos (M))
-
-    let E1 = E0 - (E0 - ε * Math.sin (E0) - M) / (1 - ε * Math.cos (E0))
-
-    while (Math.abs (E1 - E0) > error)
-        {
-        E0 = E1
-
-        E1 = E0 - (E0 - ε * Math.sin (E0) - M) / (1 - ε * Math.cos (E0))
-        }
-
-    return E1 
-    }
-
-export function distance_from_orbit_pos (xy)
-    {
-    return Math.sqrt (xy.x*xy.x + xy.y*xy.y)
-    }
-
-export function true_anomaly_from_orbit_pos (xy)
-    {
-    const θ = Math.atan2 (xy.y, xy.x) % PI2
-    
-    return (θ < 0)? θ + PI2 : θ
-    }
-
-export function get_ecliptic_coord (Ω, ω, i, θ, r)  
-    {
-    // Generate Ecliptic Coordinates from Orbital Elements
-
-    // Ω: Longitude of the Ascending Node
-    // ω: Argument of Perigee
-    // i: Inclination 
-    // θ: True Anomaly
-    // r: Distance
-
-    const x = r * ( Math.cos (Ω) * 
-                    Math.cos (θ + ω) - 
-                    Math.sin (Ω) * 
-                    Math.sin (θ + ω) * 
-                    Math.cos (i) )
-
-    const y = r * ( Math.sin (Ω) * 
-                    Math.cos (θ + ω) + 
-                    Math.cos (Ω) * 
-                    Math.sin (θ + ω) * 
-                    Math.cos (i) )
-
-    const z = r * Math.sin (θ + ω) * Math.sin (i)
-
-    return {x:x, y:y, z:z}
+    // Time since J2000.0 in Julian centuries
+    return J2000 (jd) / 36525.0
     }
 
 export function get_orbit_pos (a, ε, E)
@@ -328,27 +305,9 @@ export function get_orbit_pos (a, ε, E)
     return {x:x, y:y}
     }
 
-export function normalize_elements (Κ)
-    {
-    // Κ     Keplerian Elements
-
-    // Normalize all angles to 0 < a < 360 degrees.
-    // Also return all values as Radians.
-    const normalize = α => 
-        {
-        const A = α % 360
-
-        return (A < 0)? A + 360 : A
-        }
-
-    Κ.Ω = normalize (Κ.Ω) * DEG2RD
-    Κ.i = normalize (Κ.i) * DEG2RD
-    Κ.ω = normalize (Κ.ω) * DEG2RD
-    Κ.M = normalize (Κ.M) * DEG2RD
-
-    return Κ
-    }
-
+// Legacy Planetary Orbital-Elements Models.
+// All planet positions are now fetched from WS data.
+/*
 // ***********************************************
 // All of the following functions are based on the web page:
 // Computing planetary positions - a tutorial with worked examples
@@ -404,20 +363,6 @@ export const mars_elements = (j2000) =>
     return {Ω: Ω, i:i, ω:ω, a:a, ε:ε, M:M}
     }
 
-export function xyz_2_ρϕλ (x, y, z)
-    {
-    // Convert cartesian coordinates to longitude (λ) [0-2π rad], 
-    // latitude (ϕ), and distance (ρ) in the ecliptic plane.
-    const λ  =  Math.atan2 ( y, x ) % PI2
-    const ϕ  =  Math.atan2 ( z, Math.sqrt ( x*x + y*y ) ) 
-    const ρ  =  Math.sqrt  ( x*x + y*y + z*z )
-
-    return { 
-        λ : (λ < 0)? λ + PI2 : λ, 
-        ϕ: ϕ, 
-        ρ: ρ
-        }
-    }
 export function lunar_perturbations (moon, Ls, Ms)
     {
     // Ls       Mean longitude of the Sun
@@ -469,15 +414,53 @@ export function lunar_perturbations (moon, Ls, Ms)
     return { Pλ : Pλ * DEG2RD, Pϕ : Pϕ * DEG2RD, Pρ : Pρ }    
     }
 
-export function ρϕλ_2_xyz (ρ, ϕ, λ)
+export function eccentricity_anomaly  (M, ε, error=.005)
     {
-    // Convert longitude (λ) [0-2π rad], latitude (ϕ), and distance (ρ)
-    // to cartesian coordinates in the ecliptic plane.
-    const x = ρ * Math.cos (λ) * Math.cos (ϕ)
-    const y = ρ * Math.sin (λ) * Math.cos (ϕ)
-    const z = ρ * Math.sin (ϕ) 
+    let E0 = M +  ε * Math.sin (M) * (1 + ε * Math.cos (M))
 
-    return {x: x, y: y, z: z}
+    let E1 = E0 - (E0 - ε * Math.sin (E0) - M) / (1 - ε * Math.cos (E0))
+
+    while (Math.abs (E1 - E0) > error)
+        {
+        E0 = E1
+
+        E1 = E0 - (E0 - ε * Math.sin (E0) - M) / (1 - ε * Math.cos (E0))
+        }
+
+    return E1 
+    }
+
+export function distance_from_orbit_pos (xy)
+    {
+    return Math.sqrt (xy.x*xy.x + xy.y*xy.y)
+    }
+
+export function true_anomaly_from_orbit_pos (xy)
+    {
+    const θ = Math.atan2 (xy.y, xy.x) % PI2
+    
+    return (θ < 0)? θ + PI2 : θ
+    }
+
+export function normalize_elements (Κ)
+    {
+    // Κ     Keplerian Elements
+
+    // Normalize all angles to 0 < a < 360 degrees.
+    // Also return all values as Radians.
+    const normalize = α => 
+        {
+        const A = α % 360
+
+        return (A < 0)? A + 360 : A
+        }
+
+    Κ.Ω = normalize (Κ.Ω) * DEG2RD
+    Κ.i = normalize (Κ.i) * DEG2RD
+    Κ.ω = normalize (Κ.ω) * DEG2RD
+    Κ.M = normalize (Κ.M) * DEG2RD
+
+    return Κ
     }
 
 export function ecl_2_equ (x, y, z, ε)
@@ -494,190 +477,31 @@ export function ecl_2_equ (x, y, z, ε)
         })
     }
 
-export function ρδα_2_xyz (ρ, δ, α)
+export function get_ecliptic_coord (Ω, ω, i, θ, r)  
     {
-    // Convert distance (ρ), declination (δ), right ascension (α) to cartesian 
-    // coordinates
-    const x = ρ * Math.cos (δ) * Math.cos(α)
-    const y = ρ * Math.cos (δ) * Math.sin(α)
-    const z = ρ * Math.sin (δ) 
+    // Generate Ecliptic Coordinates from Orbital Elements
 
-    return {x: x, y: y, z: z} ;
-    }
+    // Ω: Longitude of the Ascending Node
+    // ω: Argument of Perigee
+    // i: Inclination 
+    // θ: True Anomaly
+    // r: Distance
 
+    const x = r * ( Math.cos (Ω) * 
+                    Math.cos (θ + ω) - 
+                    Math.sin (Ω) * 
+                    Math.sin (θ + ω) * 
+                    Math.cos (i) )
 
-export function mult3x1 (m, v)
-    {
-    // Convert a location vector (x, y, z coordinates) to another frame of
-    // reference by multiplying by a 3x3 transformation matrix
+    const y = r * ( Math.sin (Ω) * 
+                    Math.cos (θ + ω) + 
+                    Math.cos (Ω) * 
+                    Math.sin (θ + ω) * 
+                    Math.cos (i) )
 
-    let r = [0, 0, 0] 
-    // let v = [v3.x, v3.y, v3.z] ;
+    const z = r * Math.sin (θ + ω) * Math.sin (i)
 
-    for (let i = 0 ; i < 3 ; i++)
-        {
-        r [i] = 0. ;
-
-        for (let j = 0 ; j < 3 ; j++)
-            {
-            r [i] += m [i][j] * v [j]
-            }
-        }
-
-    //return new THREE.Vector3 (r [0], r [1], r [2]) ;
-    return r
-    }
-
-export function mltply (a, b)
-    {
-    //    INPUT:
-    //       a = 3X3 MATRIX
-    //       a = 3 COMPONENT VECTOR
-    //    OUTPUT:
-    //       r = 3 COMPONENT VECTOR
-    //    CONVERT X,Y,Z COORDS. TO ANOTHER FRAME BY MATRIX MLTPLY
-
-    let r = [0., 0., 0.]
-
-    for (let i = 0 ; i < 3 ; i++)
-        {
-        r [i] = 0. ;
-
-        for (let j = 0 ; j < 3 ; j++)
-            {
-            r [i] += a [i][j] * b [j]
-            }
-        }
-
-    // return new THREE.Vector3 (r [0], r [1], r [2]) ;    
-    return r    
-    }
-
-
-export function transpose (M)
-    {
-    // This only works on a 3x3 array!
-
-    const M01 = M [0] [1]
-    const M02 = M [0] [2]
-    const M10 = M [1] [0]
-    const M12 = M [1] [2]
-    const M20 = M [2] [0]
-    const M21 = M [2] [1]
-
-    M [0] [1] = M10
-    M [0] [2] = M20
-
-    M [1] [0] = M01
-    M [1] [2] = M21
-
-    M [2] [0] = M02
-    M [2] [1] = M12
-   
-    return M
-    }
-
-export function create_rotation_matrix (α, axis)
-    {
-    switch (axis.toUpperCase ())
-        {
-        case 'X':
-
-            return create_rotation_matrix_x (α)
-
-        case 'Y':
-
-            return create_rotation_matrix_y (α)
-
-        case 'Z':
-
-            return create_rotation_matrix_z (α)
-
-        default:
-
-            return undefined
-        }
-    }
-
-export function create_rotation_matrix_x (α)
-    {
-    const sinα = Math.sin (α)
-    const cosα = Math.cos (α)
-
-    let a = Array.from(Array(3), () => new Array(3)) 
-
-    // Create matrix to rotate α radians around the X axis
-    a [0] [0] = 1.0 
-    a [0] [1] = 0.0
-    a [0] [2] = 0.0
-
-    a [1] [0] = 0.0
-    a [1] [1] = cosα 
-    a [1] [2] = sinα
-
-    a [2] [0] = 0.0
-    a [2] [1] = -sinα
-    a [2] [2] = cosα
-
-    return a
-    }
-
-export function create_rotation_matrix_y (α)
-    {
-    const sinα = Math.sin (α)
-    const cosα = Math.cos (α)
-
-    let a = Array.from(Array(3), () => new Array(3)) 
-
-    // Create matrix to rotate α radians around the Y axis
-    a [0] [0] = cosα  
-    a [0] [1] = 0.0
-    a [0] [2] = sinα
-
-    a [1] [0] = 0.0
-    a [1] [1] = 1.0  
-    a [1] [2] = 0.0
-
-    a [2] [0] = -sinα
-    a [2] [1] = 0.0
-    a [2] [2] = cosα
-
-    return a
-    }
-
-export function create_rotation_matrix_z (α)
-    {
-    const sinα = Math.sin (α)
-    const cosα = Math.cos (α)
-
-    let a = Array.from(Array(3), () => new Array(3)) 
-
-    // Create matrix to rotate α radians around the Z axis
-    a [0] [0] = cosα  
-    a [0] [1] = sinα
-    a [0] [2] = 0.0
-
-    a [1] [0] = -sinα 
-    a [1] [1] = cosα  
-    a [1] [2] = 0.0
-
-    a [2] [0] = 0.0
-    a [2] [1] = 0.0
-    a [2] [2] = 1.0
-
-    return a
-    }
-
-export function add_vectors (a, b)
-    {
-    // Make sure both a and b are the same length
-    if  (a.length !== b.length)
-        {
-        return undefined
-        }
-
-    // Add vectors a and b
-    return a.map ((v, i) => v + b [i])
+    return {x:x, y:y, z:z}
     }
 
 export function calc_planet_gei (J2000, kepler_orbit, sun, moon_flag)
@@ -734,6 +558,366 @@ export function calc_planet_gei (J2000, kepler_orbit, sun, moon_flag)
         }
         
     return gei
+    }
+
+export class Calculate_Planet_Orbit
+    {
+    constructor ()
+        {
+        // Ensure only one actual version of this object exists
+        if  (Calculate_Planet_Orbit.instance) 
+            {
+            return Calculate_Planet_Orbit.instance
+            }
+
+        Calculate_Planet_Orbit.instance = this
+
+        // Use the following object properties to keep track of previous results from calling 
+        this.recalc = true
+        this.sun_pos = []
+        this.j2000 = []
+        }
+
+    add_orbit_pos (r, time, gse)
+        {
+        // add the time
+        r.time.push (time)
+
+        // add the GSE coordinate position
+        r.orbit.push ({x: gse.x, y:gse.y, z:gse.z})
+
+        //console.log (ws.x, ws.y, ws.z)
+        }
+
+
+    calculate_orbit (planet, record, start_time, end_time)
+        {
+        let utc = start_time
+
+        let index = 0 
+
+        //console.log ("recalc: ", this.recalc)
+
+        while (utc <= end_time)
+            {
+            //console.log (planet, index, utc)
+
+            // Do Earth as a special case, since its always at GSE (0, 0, 0)
+            if  (planet.toUpperCase () === 'EARTH')
+                {
+                this.add_orbit_pos (record, utc,  new THREE.Vector3 (0, 0, 0))
+    
+                utc += PLANET_ORBIT_INTERVAL * 60 * 1000 ;   
+    
+                index++ 
+
+                continue        
+                }
+
+            // Get information about the current position of the sun
+            const sunpos = (this.recalc) ?  sun_position (utc) : this.sun_pos [index] 
+
+            // Get the julian day number
+            const j2000 =  (this.recalc) ? J2000 (JD (utc)) : this.j2000 [index]  
+
+ 
+            let orbit 
+            let moon_flag = false 
+
+            switch (planet.toUpperCase ()) 
+                {
+                case "MOON" :
+                    orbit = moon_elements 
+                    moon_flag = true
+
+                    break ;
+
+                case "MERCURY" :
+                    orbit = mercury_elements 
+
+                    break;
+
+                case "VENUS" :
+                    orbit = venus_elements 
+
+                    break;
+
+                case "MARS" :
+                    orbit = mars_elements 
+
+                    break;
+
+                default:
+                    break ;
+                }
+            
+            const gei = (planet.toUpperCase () === 'SUN') ?  new THREE.Vector3 (
+                            sunpos.x * sunpos.R * AU,
+                            sunpos.y * sunpos.R * AU,
+                            sunpos.z * sunpos.R * AU
+                            )
+
+                        : calc_planet_gei (j2000, orbit, sunpos, moon_flag)
+
+            // convert to GSE 
+            const gse = GEI_to_GSE (gei, sunpos)
+
+            if  (planet.toUpperCase () === 'SUN')
+                {
+                //console.log (utc, JSON.stringify (gse))
+                }
+
+            if  (this.recalc)
+                {
+                this.j2000.push (j2000)
+                this.sun_pos.push (sunpos)
+                }
+
+            this.add_orbit_pos (record, utc, gse)
+          
+            utc += PLANET_ORBIT_INTERVAL * 60 * 1000 ;   
+
+            index++ 
+            }
+        
+        this.recalc = false
+        }
+    
+    reset ()
+        {
+        this.recalc = true 
+
+        this.sun_pos.length = 0
+        this.j2000.length = 0
+        }
+
+    calculate_orbit_data (planet, start_time, end_time)
+        {
+
+        const starttm = Date.now ()
+
+        return new Promise ((resolve, reject) =>
+            {
+            try 
+                {
+                let orbit_data = {
+                    time: [],
+                    orbit: [],
+                    }
+
+                this.calculate_orbit (planet, orbit_data, start_time, end_time)
+
+                console.log ('Planet orbit calculation took : ', (Date.now () - starttm) / 1000, 's')
+
+                resolve (orbit_data)
+                }
+
+            catch (error)
+                {
+                reject(error)
+                }
+            }) ;
+        } 
+    }
+*/
+
+export function xyz_2_ρϕλ (x, y, z)
+    {
+    // Convert cartesian coordinates to longitude (λ) [0-2π rad], 
+    // latitude (ϕ), and distance (ρ) in the ecliptic plane.
+    const λ  =  Math.atan2 ( y, x ) % PI2
+    const ϕ  =  Math.atan2 ( z, Math.sqrt ( x*x + y*y ) ) 
+    const ρ  =  Math.sqrt  ( x*x + y*y + z*z )
+
+    return { 
+        λ : (λ < 0)? λ + PI2 : λ, 
+        ϕ: ϕ, 
+        ρ: ρ
+        }
+    }
+export function ρϕλ_2_xyz (ρ, ϕ, λ)
+    {
+    // Convert longitude (λ) [0-2π rad], latitude (ϕ), and distance (ρ)
+    // to cartesian coordinates in the ecliptic plane.
+    const x = ρ * Math.cos (λ) * Math.cos (ϕ)
+    const y = ρ * Math.sin (λ) * Math.cos (ϕ)
+    const z = ρ * Math.sin (ϕ) 
+
+    return {x: x, y: y, z: z}
+    }
+
+// Currently not used.
+export function ρδα_2_xyz (ρ, δ, α)
+    {
+    // Convert distance (ρ), declination (δ), right ascension (α) to cartesian 
+    // coordinates
+    const x = ρ * Math.cos (δ) * Math.cos(α)
+    const y = ρ * Math.cos (δ) * Math.sin(α)
+    const z = ρ * Math.sin (δ) 
+
+    return {x: x, y: y, z: z} ;
+    }
+
+
+export function mult3x1 (m, v)
+    {
+    // Convert a location vector (x, y, z coordinates) to another frame of
+    // reference by multiplying by a 3x3 transformation matrix
+
+    let r = [0, 0, 0] 
+    // let v = [v3.x, v3.y, v3.z] ;
+
+    for (let i = 0 ; i < 3 ; i++)
+        {
+        r [i] = 0. ;
+
+        for (let j = 0 ; j < 3 ; j++)
+            {
+            r [i] += m [i][j] * v [j]
+            }
+        }
+
+    //return new THREE.Vector3 (r [0], r [1], r [2]) ;
+    return r
+    }
+
+export function mltply (a, b)
+    {
+    //    INPUT:
+    //       a = 3X3 MATRIX
+    //       b = 3 COMPONENT VECTOR
+    //    OUTPUT:
+    //       r = 3 COMPONENT VECTOR
+    //    CONVERT X,Y,Z COORDS. TO ANOTHER FRAME BY MATRIX MLTPLY
+
+    let r = [0., 0., 0.]
+
+    for (let i = 0 ; i < 3 ; i++)
+        {
+        r [i] = 0. ;
+
+        for (let j = 0 ; j < 3 ; j++)
+            {
+            r [i] += a [i][j] * b [j]
+            }
+        }
+
+    // return new THREE.Vector3 (r [0], r [1], r [2]) ;    
+    return r    
+    }
+
+
+export function transpose (M)
+    {
+    // Return the transpose of a 3x3 array.  Does not modify M.
+    return [
+        [M [0] [0], M [1] [0], M [2] [0]],
+        [M [0] [1], M [1] [1], M [2] [1]],
+        [M [0] [2], M [1] [2], M [2] [2]],
+        ]
+    }   
+
+export function create_rotation_matrix (α, axis)
+    {
+    switch (axis.toUpperCase ())
+        {
+        case 'X':
+
+            return create_rotation_matrix_x (α)
+
+        case 'Y':
+
+            return create_rotation_matrix_y (α)
+
+        case 'Z':
+
+            return create_rotation_matrix_z (α)
+
+        default:
+
+            return undefined
+        }
+    }
+
+export function create_rotation_matrix_x (α)
+    {
+    const sinα = Math.sin (α)
+    const cosα = Math.cos (α)
+
+    let a = Array.from(Array(3), () => new Array(3)) 
+
+    // Create matrix to rotate α radians around the X axis
+    a [0] [0] = 1.0 
+    a [0] [1] = 0.0
+    a [0] [2] = 0.0
+
+    a [1] [0] = 0.0
+    a [1] [1] = cosα 
+    a [1] [2] = sinα
+
+    a [2] [0] = 0.0
+    a [2] [1] = -sinα
+    a [2] [2] = cosα
+
+    return a
+    }
+
+export function create_rotation_matrix_y (α)
+    {
+    const sinα = Math.sin (α)
+    const cosα = Math.cos (α)
+
+    let a = Array.from(Array(3), () => new Array(3)) 
+
+    // Create matrix to rotate α radians around the Y axis
+    a [0] [0] = cosα  
+    a [0] [1] = 0.0
+    a [0] [2] = -sinα
+
+    a [1] [0] = 0.0
+    a [1] [1] = 1.0  
+    a [1] [2] = 0.0
+
+    a [2] [0] = sinα
+    a [2] [1] = 0.0
+    a [2] [2] = cosα
+
+    return a
+    }
+
+export function create_rotation_matrix_z (α)
+    {
+    const sinα = Math.sin (α)
+    const cosα = Math.cos (α)
+
+    let a = Array.from(Array(3), () => new Array(3)) 
+
+    // Create matrix to rotate α radians around the Z axis
+    a [0] [0] = cosα  
+    a [0] [1] = sinα
+    a [0] [2] = 0.0
+
+    a [1] [0] = -sinα 
+    a [1] [1] = cosα  
+    a [1] [2] = 0.0
+
+    a [2] [0] = 0.0
+    a [2] [1] = 0.0
+    a [2] [2] = 1.0
+
+    return a
+    }
+
+export function add_vectors (a, b)
+    {
+    // Make sure both a and b are the same length
+    if  (a.length !== b.length)
+        {
+        return undefined
+        }
+
+    // Add vectors a and b
+    return a.map ((v, i) => v + b [i])
     }
 
 export function UTC_to_YDH (time)
@@ -871,6 +1055,65 @@ export function HHMMSS_to_rad (hours, min, sec)
     return degrees * DEG2RD ;
     }
 
+export function obliquity_of_ecliptic (T0)
+    {
+    /*   
+    * Obliquity of the ecliptic (epsilon).
+    *
+    * This is the tilt of Earth's equator relative to the ecliptic
+    * plane, and it drifts slowly over time.
+    * Hapgood (1992), Equation (5)
+    * 
+    * Code generated by Anthropic Claude Sonnet 5.0
+    * @param {number} T0 - Julian centuries from epoch 2000.0.
+    * @returns {number} epsilon, in degrees.
+    */
+    const epsilon = 23.439 - 0.013 * T0
+
+    return epsilon
+    }
+
+
+export function solar_ecliptic_longitude (T0, UT)
+    {
+    /**
+    * Longitude of the Sun along the ecliptic (lambda).
+    *  
+    * Calculates the sun's ecliptic longitude (lambda_sun), both in 
+    * degrees, for a given time expressed in Julian centuries from 
+    * epoch 2000.0 (T0) and the time of day in Universal Time hours (UT).
+    * Hapgood (1992), Equation (5)
+    * 
+    * Code generated by Anthropic Claude Sonnet 5.0
+     * @param {number} T0 - Julian centuries from epoch 2000.0.
+     * @param {number} UT - Universal Time, in hours, within the day.
+     * @returns {number} lambda_sun, in degrees.
+     */
+
+    // Step 1: Sun's mean anomaly (M).
+    // This describes how far along its orbit the Sun appears to be,
+    // assuming a uniform (circular) orbital speed.
+    const mean_anomaly = 357.528 + 35999.050 * T0 + 0.04107 * UT
+
+    // Step 2: Sun's mean longitude (Lambda).
+    // This is the Sun's ecliptic longitude assuming a uniform orbit,
+    // before correcting for orbital eccentricity.
+    const mean_longitude = 280.460 + 36000.772 * T0 + 0.04107 * UT
+
+    // Step 3: Convert mean anomaly to radians for use in sin().
+    const mean_anomaly_rad = mean_anomaly * (Math.PI / 180)
+
+    // Step 4: Sun's true ecliptic longitude (lambda_sun).
+    // This adds the "equation of center" correction terms to the
+    // mean longitude, accounting for the eccentricity of Earth's
+    // orbit around the Sun.
+    const lambda_sun =
+        mean_longitude +
+        (1.915 - 0.0048 * T0) * Math.sin(mean_anomaly_rad) +
+        0.020 * Math.sin(2 * mean_anomaly_rad)
+
+    return lambda_sun
+    }
 
 export function sun_position (time)
     {
@@ -1046,6 +1289,10 @@ export const coord_unit =
     KM: 3,
     RS: 4,
     KM3: 5, 
+    // This is an alias for KM, but is used to denote the default Web Service coordinate unit.
+    WS: 6,       
+    // This is an alias for RE, but is used to denote the default THREE.js display coordinate unit.
+    DS: 7,       
     UNKNOWN: 0,
     }
 
@@ -1206,10 +1453,35 @@ export class CONVERT_UNIT
                 return v
             }
         }
+
+    static unalias (unit)
+        {
+        switch (unit)
+            {
+            case COORD_Unit.WS :
+                return COORD_Unit.KM
+
+            case COORD_Unit.DS :
+                return COORD_Unit.RE
+
+            default :
+                return unit
+            }
+        }
     }
 
 export function convert (v, unit = COORD_Unit.RE, to = COORD_Unit.RE)
     {
+    // remove aliases for the unit and to values
+    unit = CONVERT_UNIT.unalias (unit)
+    to = CONVERT_UNIT.unalias (to)
+
+    // Check for identical units, in which case no conversion is needed.
+    if  (unit === to)
+        {
+        return v
+        }
+
     switch (to)
         {
         case COORD_Unit.RE :
@@ -1238,11 +1510,40 @@ export function convert (v, unit = COORD_Unit.RE, to = COORD_Unit.RE)
         }
     }
 
+export function DU (v, unit = COORD_Unit.WS)
+    {
+    // Convert an array, coordinate object or scalar to the display
+    // unit (DS) for use in THREE.js.
+    // The default is to convert from the web service unit (WS).
+
+
+    if  (Array.isArray(v)) 
+        {
+        const r = v.map (i => convert (i, unit, COORD_Unit.DS))
+        // console.log ("DU: ", v, unit, r)
+        return r
+        }
+
+    if  (v !== null && typeof v === 'object')
+        {
+        const p = Object.entries (v)
+        const c = p.map (([k, val]) => [k, convert (val, unit, COORD_Unit.DS)])
+        const r = Object.fromEntries (c)
+        // console.log ("DU: ", v, unit, r)
+        return r
+        }
+
+    const r = convert (v, unit, COORD_Unit.DS)
+    // console.log ("DU: ", v, unit, r)
+    return r
+    }
+
 export const coord_formats =
     {
     VECTOR3: 3,
     OBJ: 2,
     ARRAY: 1,
+    DS: 4,        // Object array as returned by the data store. 
     UNKNOWN: 0,
     }
 
@@ -1711,9 +2012,31 @@ export function coord_system_to_frame (system)
     }
 
 
+export function is_DS_obj (obj)
+    {
+    // Checks if the given object is a valid data store object.
+    if  (typeof obj !== 'object' || obj === null)
+        {
+        return false
+        }
+
+    return obj.hasOwnProperty ('x') && obj.hasOwnProperty ('y') && obj.hasOwnProperty ('z') 
+    }
+
+export function is_DS_array (obj)
+    {
+    // Checks if the given object is an array of data store objects.
+    if  (!Array.isArray (obj))
+        {
+        return false
+        }
+
+    return obj.every (item => is_DS_obj(item))
+    }
+
 // Class to accept the parameters to a function where is expected that either first
 // parameter will be object that represents the coordinate tuple(s) or the first three
-// parameters represent the x, y, z coordinates
+// parameters represent the x, y, z coordinate
 
 // 
 export function transform_coordinates (transform, ...args)
@@ -1722,7 +2045,7 @@ export function transform_coordinates (transform, ...args)
     //const t0 = performance.now ()    
 
     let work = null
-    let input_type = COORD_Format.UNKNNOWN
+    let input_type = COORD_Format.UNKNOWN
 
     if  (args.length === 0)
         {
@@ -1741,10 +2064,10 @@ export function transform_coordinates (transform, ...args)
             args.shift ()
             }
 
-        else if (obj.hasOwnProperty ('x') && obj.hasOwnProperty ('y') && obj.hasOwnProperty ('z'))
+        else if (is_DS_array (obj))
             {
-            work = [obj.x, obj.y, obj.z]
-            input_type = COORD_Format.OBJ
+            work = obj.map (item => [item.x, item.y, item.z]).flat ()
+            input_type = COORD_Format.DS
 
             args.shift ()
             }
@@ -1757,6 +2080,16 @@ export function transform_coordinates (transform, ...args)
             args.shift ()
             }
 
+
+        else if (obj.hasOwnProperty ('x') && obj.hasOwnProperty ('y') && obj.hasOwnProperty ('z'))
+            {
+            work = [obj.x, obj.y, obj.z]
+            input_type = COORD_Format.OBJ
+
+            args.shift ()
+            }
+
+
         else
             {
             return null
@@ -1765,7 +2098,7 @@ export function transform_coordinates (transform, ...args)
 
     else 
         {
-        if  (args.length > 2)
+        if  (args.length > 2 && typeof args[0] === 'number' && typeof args[1] === 'number' && typeof args[2] === 'number')
             {
             const x = args.shift ()
             const y = args.shift ()
@@ -1802,16 +2135,16 @@ export function transform_coordinates (transform, ...args)
                 if  (args [j].length === len_3)
                     {
                     p.push (args [j].slice (first, last))
-
                     continue
                     }
 
                 if  (args [j].length === len)
                     {
                     p.push (args [j] [i])
-
                     continue
                     }
+
+                return null    // array argument doesn't match the coordinate count
                 }
 
             // Scalar
@@ -1821,7 +2154,15 @@ export function transform_coordinates (transform, ...args)
                 }
             }
 
-        work.splice (first, 3, ...transform.apply (undefined, p))
+        const r = transform (...p)
+
+        if  (r === null)
+            {
+            return null
+            }
+
+        //work.splice (first, 3, ...transform.apply (undefined, p))
+        work.splice (first, 3, ...r)
         }
 
     // const t1 = performance.now ()
@@ -1842,6 +2183,21 @@ export function transform_coordinates (transform, ...args)
 
             return work
 
+        case COORD_Format.DS:
+
+            const r = []
+
+            for (let i = 0 ; i < len_3 ; i++)
+                {
+                const x = work [i * 3]
+                const y = work [i * 3 + 1]
+                const z = work [i * 3 + 2]
+                
+                r.push ({x, y, z})
+                }
+
+            return r
+
         default: 
 
             return null
@@ -1859,6 +2215,9 @@ export function ANY_to_GSE (any, system = COORD_System.UNKNOWN, time)
     //    GEO: 5, 
     //    SM: 6, 
     //    MAG: 7
+
+    // NOTE:  any must be a THREE.js Vector3 object or a three element array.
+    // Update the function to handle longer arrays after moving to GEI coordinates.
     
     if  (system === COORD_System.GSE)
         {
@@ -1871,12 +2230,6 @@ export function ANY_to_GSE (any, system = COORD_System.UNKNOWN, time)
 
     switch (system)
         {
-        // Mars-centered Solar Orbital coordinate system.  This coordinate system does not 
-        // resolve to GEI but is transformed into GSE directly.
-        case COORD_System.MSO :
-            {
-            return MSO_to_GSE (any, sunpos, time)
-            }
 
         // Selenocentric coordinate systems.  These coordinate systems do not resolve to GEI
         // but are transformed into GSE directly.
@@ -1885,15 +2238,33 @@ export function ANY_to_GSE (any, system = COORD_System.UNKNOWN, time)
             return SSE_to_GSE (any, sunpos, time)
             }
 
+        // Mars-centered Solar Orbital coordinate system.  This coordinate system requires going 
+        // HEE and then to GSE.
+        case COORD_System.MSO :
+            {
+            const hae = MSO_to_HAE (any, time)
+
+            if  (hae === null)
+                {
+                return null
+                }
+
+            const hee = HAE_to_HEE (hae, sunpos)
+
+            return hee? HEE_to_GSE (hee, time) : null
+            }
+
         // Heliocentric coordinate systems.  These coordinate systems do not resolve to GEI
         // but are transformed into GSE directly.
         case COORD_System.HEE :
             
-            return HEE_to_GSE (any, sunpos)
+            return HEE_to_GSE (any, time)
 
         case COORD_System.HAE :
 
-            return HAE_to_HEE (HEE_to_GSE (any, sunpos), sunpos)
+            const hee = HAE_to_HEE (hae, sunpos)
+
+            return hee? HEE_to_GSE (hee, time) : null
 
         // Geocentric Coordinate Systems.  These coordinate systems are transformed first
         // to GEI before being transformed into GSE.
@@ -1919,7 +2290,12 @@ export function ANY_to_GSE (any, system = COORD_System.UNKNOWN, time)
 
         case COORD_System.MAG:
             
-            gei = GEO_to_GEI (MAG_to_GEO (any, time), gmst (time))
+            
+            // gei = GEO_to_GEI (MAG_to_GEO (any, time), gmst (time))
+            const mag = MAG_to_GEO (any, time)
+
+            gei = mag? GEO_to_GEI (mag, gmst (time)) : null
+
             break
 
         case COORD_System.GEI:
@@ -1932,6 +2308,12 @@ export function ANY_to_GSE (any, system = COORD_System.UNKNOWN, time)
             console.log ("Unknown coordinate system supplied")
 
             return null
+        }
+
+    // Check for null GEI before converting to GSE
+    if  (gei === null)
+        {
+        return null
         }
 
     return GEI_to_GSE (gei, sunpos)
@@ -1950,14 +2332,14 @@ export function GSE_to_ANY (gse, system = COORD_System.UNKNOWN, time)
 
     if  (system === COORD_System.HEE)
         {
-        //alert (gse)
-        //alert (GSE_to_HEE (gse, sunpos))
-        return GSE_to_HEE (gse, sunpos)
+        return GSE_to_HEE (gse, time)
         }
 
     if  (system === COORD_System.HAE)
         {
-        return HEE_to_HAE (GSE_to_HEE (gse, sunpos), sunpos)
+        const hee = GSE_to_HEE (gse, time)
+
+        return hee? HEE_to_HAE (hee, sunpos) : null
         }
 
     if  (system === COORD_System.SSE)
@@ -1967,10 +2349,24 @@ export function GSE_to_ANY (gse, system = COORD_System.UNKNOWN, time)
 
     if  (system === COORD_System.MSO)
         {
-        return GSE_to_MSO (gse, sunpos, time)
+        const hee = GSE_to_HEE (gse, time)
+
+        if  (hee === null)
+            {
+            return null
+            }
+
+        const hae = HEE_to_HAE (hee, sunpos)
+
+        return hae? HAE_to_MSO (hae, time) : null
         }
 
     const gei = GSE_to_GEI (gse, sunpos)
+
+    if  (gei === null)
+        {
+        return null
+        }
 
     //console.log (JSON.stringify (gei))
 
@@ -1993,8 +2389,10 @@ export function GSE_to_ANY (gse, system = COORD_System.UNKNOWN, time)
             return GEI_to_SM (gei, sunpos, gmst (time), time)
 
         case COORD_System.MAG:
-            
-            return GEO_to_MAG (GEI_to_GEO (gei, gmst (time)), time)
+
+            const geo = GEI_to_GEO (gei, gmst (time))
+
+            return geo? GEO_to_MAG (geo, time) : null
 
         case COORD_System.GEI:
 
@@ -2046,7 +2444,6 @@ export function GEI_to_GSE (...args)
 
 export function GEO_to_GEI (...args)
     {
-    //console.log ('GEO_to_GEI')
     return transform_coordinates (GEO.GEO_to_GEI, ...args)
     }
 
@@ -2110,14 +2507,14 @@ export function SSE_to_GSE (...args)
     return transform_coordinates (SELENE.SSE_to_GSE, ...args)
     }   
 
-export function MSO_to_GSE (...args)
+export function MSO_to_HAE (...args)
     {
-    return transform_coordinates (MARS.MSO_to_GSE, ...args)
+    return transform_coordinates (MARS.MSO_to_HAE, ...args)
     }
 
-export function GSE_to_MSO (...args)
+export function HAE_to_MSO (...args)
     {
-    return transform_coordinates (MARS.GSE_to_MSO, ...args)
+    return transform_coordinates (MARS.HAE_to_MSO, ...args)
     }
 
 //export function GSE_to_WS (x, y, z, normalize = 0)
@@ -2134,164 +2531,5 @@ export function Frame_to_DS (...args)
     }
 
 /* No longer used.
-export class Calculate_Planet_Orbit
-    {
-    constructor ()
-        {
-        // Ensure only one actual version of this object exists
-        if  (Calculate_Planet_Orbit.instance) 
-            {
-            return Calculate_Planet_Orbit.instance
-            }
-
-        Calculate_Planet_Orbit.instance = this
-
-        // Use the following object properties to keep track of previous results from calling 
-        this.recalc = true
-        this.sun_pos = []
-        this.j2000 = []
-        }
-
-    add_orbit_pos (r, time, gse)
-        {
-        // add the time
-        r.time.push (time)
-
-        // add the GSE coordinate position
-        r.orbit.push ({x: gse.x, y:gse.y, z:gse.z})
-
-        //console.log (ws.x, ws.y, ws.z)
-        }
-
-
-    calculate_orbit (planet, record, start_time, end_time)
-        {
-        let utc = start_time
-
-        let index = 0 
-
-        //console.log ("recalc: ", this.recalc)
-
-        while (utc <= end_time)
-            {
-            //console.log (planet, index, utc)
-
-            // Do Earth as a special case, since its always at GSE (0, 0, 0)
-            if  (planet.toUpperCase () === 'EARTH')
-                {
-                this.add_orbit_pos (record, utc,  new THREE.Vector3 (0, 0, 0))
-    
-                utc += PLANET_ORBIT_INTERVAL * 60 * 1000 ;   
-    
-                index++ 
-
-                continue        
-                }
-
-            // Get information about the current position of the sun
-            const sunpos = (this.recalc) ?  sun_position (utc) : this.sun_pos [index] 
-
-            // Get the julian day number
-            const j2000 =  (this.recalc) ? J2000 (JD (utc)) : this.j2000 [index]  
-
- 
-            let orbit 
-            let moon_flag = false 
-
-            switch (planet.toUpperCase ()) 
-                {
-                case "MOON" :
-                    orbit = moon_elements 
-                    moon_flag = true
-
-                    break ;
-
-                case "MERCURY" :
-                    orbit = mercury_elements 
-
-                    break;
-
-                case "VENUS" :
-                    orbit = venus_elements 
-
-                    break;
-
-                case "MARS" :
-                    orbit = mars_elements 
-
-                    break;
-
-                default:
-                    break ;
-                }
-            
-            const gei = (planet.toUpperCase () === 'SUN') ?  new THREE.Vector3 (
-                            sunpos.x * sunpos.R * AU,
-                            sunpos.y * sunpos.R * AU,
-                            sunpos.z * sunpos.R * AU
-                            )
-
-                        : calc_planet_gei (j2000, orbit, sunpos, moon_flag)
-
-            // convert to GSE 
-            const gse = GEI_to_GSE (gei, sunpos)
-
-            if  (planet.toUpperCase () === 'SUN')
-                {
-                //console.log (utc, JSON.stringify (gse))
-                }
-
-            if  (this.recalc)
-                {
-                this.j2000.push (j2000)
-                this.sun_pos.push (sunpos)
-                }
-
-            this.add_orbit_pos (record, utc, gse)
-          
-            utc += PLANET_ORBIT_INTERVAL * 60 * 1000 ;   
-
-            index++ 
-            }
-        
-        this.recalc = false
-        }
-    
-    reset ()
-        {
-        this.recalc = true 
-
-        this.sun_pos.length = 0
-        this.j2000.length = 0
-        }
-
-    calculate_orbit_data (planet, start_time, end_time)
-        {
-
-        const starttm = Date.now ()
-
-        return new Promise ((resolve, reject) =>
-            {
-            try 
-                {
-                let orbit_data = {
-                    time: [],
-                    orbit: [],
-                    }
-
-                this.calculate_orbit (planet, orbit_data, start_time, end_time)
-
-                console.log ('Planet orbit calculation took : ', (Date.now () - starttm) / 1000, 's')
-
-                resolve (orbit_data)
-                }
-
-            catch (error)
-                {
-                reject(error)
-                }
-            }) ;
-        } 
-    }
 */
 

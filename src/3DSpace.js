@@ -746,7 +746,9 @@ class display_space
 
                 this.entity_manager.clear_focus ()
 
-                 this.target (pl.dist, this.get_camera_vector ('X'), new THREE.Vector3 (0, 0, 0))
+                this.target (pl.dist, this.get_camera_vector ('X'), new THREE.Vector3 (0, 0, 0))
+
+                this.update_axes_length (pl.def_axis_len)
 
                 this._target_label = pl.name
 
@@ -1269,6 +1271,11 @@ class display_space
             }
         }
 
+    initialize_time ()
+        {
+        this.set_time (this.entity_manager.start_time)
+        }
+
     set_time (time)
         {
         // Convert the slider position into a time and update the time.
@@ -1690,7 +1697,7 @@ class display_space
 
     add_planet (...args)
         {
-       return  this.entity_manager.add_planet (...args)
+        return  this.entity_manager.add_planet (...args)
         }
 
     display_terminator (d = true)

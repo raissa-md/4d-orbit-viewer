@@ -9,16 +9,15 @@ import { DARK_TEXT_COLOR, LIGHT_TEXT_COLOR } from './constants.js'
 import { DEF_BACKGROUND_COLOR } from './constants.js'
 import { DEF_FOCUS_DISTANCE } from './constants.js'
 import { DEF_FOCUS_DISTANCE_PLANET } from './constants.js'
-import { DEF_STEP_SIZE } from './constants.js'
 import { ORTHO_TARGET_DIST } from './constants.js'
 import terminator_diffuse from './images/terminator_line.png'
 
 import { MAX_DATASET_PRIORITY } from './Observatory.jsx'
 
-//import {Lat_Lon_to_XYZ} from './geo_orbit.js'
 import {get_default_coord_sys, ρϕλ_2_xyz} from './Orbit.js'
 import {sph2rect} from './Orbit.js'
-import { DEG2RD, GSE_to_ANY } from './Orbit.js'
+import { DEG2RD } from './Orbit.js'
+import { GSE_to_ANY } from './Orbit.js'
 import { COORD_System } from './Orbit.js'
 import { coord_system_to_key } from './Orbit.js'
 import { ref_frame_to_planet } from './Orbit.js'
@@ -27,6 +26,8 @@ import { get_default_unit } from './Orbit.js';
 import { REF_FRAME } from './Orbit.js'
 import { GSE_to_WS } from './Orbit.js'
 import { Frame_to_DS } from './Orbit.js'
+import { DU } from './Orbit.js'
+import { Sun } from './Orbit.js'
 import { xyz } from './Orbit.js'
 // import { Calculate_Planet_Orbit } from './Orbit.js'
 //import { EARTH_RADIUS } from './Orbit.js'
@@ -36,16 +37,18 @@ import { get_rotation_function } from './planet_data.js'
 import { rotate_terminator } from './Rotation.js'
 import { ALERT } from './message_box.jsx'
 
+import { MSEC_PER_HOUR } from './Orbit.js'
 import { TIME_RATE } from './constants.js'
 import { MAX_MESHLINE_PTS } from './constants.js'
-import { PLANET_ORBIT_INTERVAL } from './constants.js'
 //import { PlaySquareOutlined } from '@ant-design/icons';
 import { PLANETS } from './planet_data.js'
 
 import { SSC_WS } from './ssc_ws.js'
+import { SSC_Coord_Sys } from './ssc_ws.js'
 import { CCMC_HAPI } from './ssc_ws.js'
 import { JN } from './ssc_ws.js'
 import { Orbit_Data } from './App.jsx'
+import { HELIO } from "./App.jsx"
 
 const DEF_SC_COLOR = "#FFFF00" ;
 const DEF_SC_SHAPE = "sphere" ;
@@ -67,6 +70,7 @@ const data_formats =
     UNKNOWN:     0,
     SCALAR:      1,     // Single value per timestamp (e.g. magnetopause standoff distance)
     COORD:       2,     // XYZ position data (e.g. orbit data)
+    DUAL:        3,     // Dual coordinate system (e.g., GEI J2000 and GEI Time of Day)
     }
 
 export const DATA_Format = Object.freeze (data_formats)
@@ -204,7 +208,7 @@ function orbit_class_to_res (orbit = "L", cadence = 60)
         // 1 point per day (or an orbital period of MIN_ORBIT_POS days)
         case "X" :
         
-            period = 1440 * MIN_ORBIT_POS
+            period = 60 * MIN_ORBIT_POS
             
             break
 
@@ -213,9 +217,10 @@ function orbit_class_to_res (orbit = "L", cadence = 60)
         // No default action.
         }
 
+    console.log ("orbit_class_to_res: orbit %s period %s cadence %s n_orbit_pos %s", orbit, period, cadence, n_orbit_pos)
     const res = Math.floor (period / ((n_orbit_pos * cadence) / 60))
 
-    return Math.max (1, res)
+    return Math.min (Math.max (1, res), 999)
     }
 
 function min_allowed_res (t0, t1, cadence = 60)
@@ -313,12 +318,13 @@ export class entity
     set_time (time = 0)
         {
         this._now = time
-        console.log ('Setting time to: ', time)
+        console.log ('Setting time to: ', new Date(this._now).toUTCString(), ' for entity: ', this._id)
         }
 
     V3_from_orbit (index = 0)
         {
         // return new THREE.Vector3 (this._orbit [pos].x, this._orbit [pos].y, this._orbit [pos].z)
+        // Note: This returns a THREE.Vector3 object in Web Service units (km). It does not convert to Display Units.
         const {x, y, z} = Orbit_Data.get_pos (this._id, index)
 
         return new THREE.Vector3 (x, y, z)
@@ -364,7 +370,7 @@ export class entity
             if  (Orbit_Data.entity_data_valid (this._id))
                 {
                 // Update spacecraft position to current time 
-                this.update_position (this._now)
+                this.update_position (this._now, true)
                 }
             }
         }
@@ -380,7 +386,7 @@ export class entity
             if  (Orbit_Data.entity_data_valid (this._id))
                 {
                 // Update spacecraft position to current time 
-                this.update_position (this._now)
+                this.update_position (this._now, true)
                 }
             }
         }
@@ -391,11 +397,21 @@ export class entity
         // pos is an object with x, y, z properties {x: , y: , z: }
 
         // const gse = this.orbit_to_frame (pos, time)  
+        // if (this._id === 'EARTH') {alert ("(pos_to_DS) pos is " + JSON.stringify(pos) + " system = " + system + " id = " + this._id)}
 
         // console.log ("Converting position to display system: ", pos, " at time ", time, " in system ", system)
-        const r = Frame_to_DS (GSE_to_ANY (pos, system, time))
+        const target = GSE_to_ANY (pos, system, time)
 
-        return r
+        // if (this._id === 'EARTH') {alert ("(pos_to_DS) target is " + JSON.stringify(target))}
+
+        if  (target !== null)
+            {
+            const du = DU (target)
+
+            return du? Frame_to_DS (du) : null
+            }
+
+        return null
         }
 
     // Currently only used for creating the beginning of track marker.
@@ -406,7 +422,13 @@ export class entity
         const pos = Orbit_Data.get_pos (this._id, index, center)
         const time = Orbit_Data.get_time (this._id, index)
 
-        return this.pos_to_DS (pos, time, system)
+
+        if  (pos !== null && time !== null)
+            {
+            return this.pos_to_DS (pos, time, system)
+            }
+
+        return null
         }
 
     calc_position (time, use_interpolation=false, center = this._coord_center)
@@ -458,6 +480,11 @@ export class entity
             //this._at_end = true
             }
 
+        // if  (this._id === 'mercury')
+        //     {
+        //     console.log ("--> time is: ", new Date(this._now).toUTCString())
+        //     }
+
         // time_to_index returns a floating-point index representing the interpolated 
         // position in the orbit data
         const index = Orbit_Data.time_to_index (this._id, this._now, f_interpolate)
@@ -493,10 +520,16 @@ export class entity
 
         // NB. calc_position may reset this._now to the end or beginning of the orbit data.
         // NB. pos_to_DS returns the position in {x: , y: , z: } format.
-        const gse = this.pos_to_DS (pos, this._now)
 
-        this._obj.position.fromArray (xyz (gse))
-        /*
+        const ds = this.pos_to_DS (pos, this._now)
+
+        // Not sure how to coordinate transformation failure.  For Now, we ignore the transformed coordinates
+        // and just use GSE.  
+        const p = ds? ds : this.pos_to_DS (pos, this._now, COORD_System.GSE)
+
+        this._obj.position.fromArray (xyz (p))
+
+       /*
         const test = new THREE.Vector3 ()    
         
         test.fromArray (this.pos_to_DS (pos, time, system))
@@ -723,8 +756,8 @@ export class entity
         Orbit_Data.delete_data (this._id)
 
         // Some of this may be moved to Orbit_Data in the future
-        this._now = 0
-        this._index  = 0
+        // this._now = 0
+        this._index  = -1
         // this._at_start = false
         // this._at_end   = false
         }
@@ -743,22 +776,37 @@ export class entity
         if  (this.data_valid ())
             {
             // This could probably be rewritten to be more efficient?
-            r.time = Orbit_Data.get_time (this._id, index)
+            const time = Orbit_Data.get_time (this._id, index)
 
-            const {x, y, z} = GSE_to_ANY (Orbit_Data.get_pos (this._id, index), system, r.time)
-            //const {x, y, z} = GSE_to_ANY ({x:81.38, y:-29.62, z:-50}, system, r.time)
-            // const {x, y, z} = ANY_to_GSE ({x:100.0, y:100, z:100}, system, r.time)
-            // const {x, y, z} = ANY_to_GSE (ρϕλ_2_xyz (100., -30.*DEG2RD, -20.*DEG2RD), system, r.time)
-            //const {x, y, z}= ρϕλ_2_xyz (100., -30.*DEG2RD, -20.*DEG2RD)
-            //const x = v [0]
-            //const y = v [1]
-            //const z = v [2]
+            // I am not sure we need to convert to Display Unit here.
+            // It may be better to just return the position in the WS coordinate system.
 
-            r.x = x
-            r.y = y
-            r.z = z
+            const pos = Orbit_Data.get_pos (this._id, index)
 
-            r.valid = true 
+            if  (pos !== null && time !== null)
+                {
+                const target = GSE_to_ANY (pos, system, time)
+
+                if  (target !== null)
+                    {
+                    const {x, y, z} = DU (target)
+                    
+                    //const {x, y, z} = GSE_to_ANY ({x:81.38, y:-29.62, z:-50}, system, r.time)
+                    // const {x, y, z} = ANY_to_GSE ({x:100.0, y:100, z:100}, system, r.time)
+                    // const {x, y, z} = ANY_to_GSE (ρϕλ_2_xyz (100., -30.*DEG2RD, -20.*DEG2RD), system, r.time)
+                    //const {x, y, z}= ρϕλ_2_xyz (100., -30.*DEG2RD, -20.*DEG2RD)
+                    //const x = v [0]
+                    //const y = v [1]
+                    //const z = v [2]
+                    r.time = time
+
+                    r.x = x
+                    r.y = y
+                    r.z = z
+
+                    r.valid = true 
+                    }
+                }
             }
 
         return r
@@ -804,7 +852,8 @@ export class entity
             this._exist = true
             }
 
-        return val
+        // Flatten the return value to a boolean.
+        return !! val
         }
 
 
@@ -887,11 +936,13 @@ class planet extends entity
         this._specular = null
         this._terminator = false
         this._terminator_obj = null
-        this._step_size = DEF_STEP_SIZE 
         this._focus_dist = DEF_FOCUS_DISTANCE_PLANET
         this._emit_light = 0.
         this._lc = 0xFFFFFF
         this._ssc_id = ""
+        this._origin = false    // Indicates that the body sits at the origin of
+                                //  geocentric reference frames.
+        
 
         if  (args.length === 1 && typeof args[0] === 'object')
             {
@@ -901,11 +952,11 @@ class planet extends entity
             args [0].normal && (this._normal = args [0].normal)
             args [0].specular && (this._specular = args [0].specular)
             args [0].terminator && (this._terminator = args [0].terminator)
-            args [0].step_size && (this._step_size = args [0].step_size)
             args [0].dist && (this._focus_dist = args [0].dist)
             args [0].emit_light && (this._emit_light = args [0].emit_light)
             args [0].lc && (this._lc = args [0].lc)
             args [0].ssc_id && (this._ssc_id = args [0].ssc_id)
+            args [0].origin && (this._origin = args [0].origin)
             }
         else
             {
@@ -975,40 +1026,33 @@ class planet extends entity
         // actually move (always at 0,0,0 GSE) it doesn't get an orbit data request.  But orbit
         // data for it may still be required (somewhere).  There is probably a better way to do
         // this (if it even needs to be done at all).
-        if  (this._ssc_id === "")
+        if  (this._origin === true)
             {
             return new Promise ((resolve) => 
                 {
-                Orbit_Data.create_pseudo_data (this._id, t0, t1, PLANET_ORBIT_INTERVAL * 60 * 1000)
+                Orbit_Data.create_pseudo_data (this._id, t0, t1, MSEC_PER_HOUR)
                     
-                resolve ()
+                resolve (this._id)
                 });
             }
 
+        // Frequency is fixed at 12 for now.
         console.log ("planet = ", this._ssc_id)
-        return SSC_WS.get_orbit_data (this._ssc_id, t0, t1, 12, 'GSE', COORD_Unit.RE, this._id)
+        // Planet orbit data is available at one orbit position per minute (60 seconds).
+        // Request on orbit position per hour.
+        return SSC_WS.get_orbit_data (this._ssc_id, t0, t1, 60, SSC_Coord_Sys.GSE, COORD_Unit.KM, this._id)
 
-        /* Orbit data is now stored in the Orbit_Data module.
-            .then ( (data) =>
+            .then ( (s) =>
                 {
-                this._time = data.time
-                this._orbit = data.coord
+                // s is a status value returned from earlier in the processing pipeline. 
+                // I probably should handle it, but for now it's ignored.
 
-                this.decimate ()
+                // const id = Orbit_Data.calculate_velocity_normals (this._id)
+
+                // This value is currently not used, but it may be useful in the future.
+                return s
                 }) ;
-        */
-
-        /*
-        return this.orbit_calc.calculate_orbit_data (this._id, t0, t1)
-
-            .then ( (data) =>
-                {
-                this._time = data.time
-                this._orbit = data.orbit
-                }) ;
-        */
         }
-
     /*
     get_orbit_data (t0, t1)
         {
@@ -1036,12 +1080,35 @@ class planet extends entity
             return
             }
 
+        /*
+        const vector = Orbit_Data.get_velocity_normal (this._id, time, true, COORD_System.HAE)
+
+        console.log (`vector = ${JSON.stringify(vector)}`)
+
+        if  (vector && vector.x * vector.x + vector.y * vector.y + vector.z * vector.z > 0)
+            {
+            const vel = xyz (vector)
+
+            const c = vel
+
+            const pos = Frame_to_DS (c)
+
+            // alert ("pos = " + JSON.stringify(pos))
+
+                
+                
+            this._line.geometry.attributes.position.setXYZ (1, pos [0] * 3, pos[1] * 3, pos[2] * 3)
+            this._line.geometry.attributes.position.needsUpdate = true
+            }
+        */
+
+
         super.update_position (time, true)
 
         this.rotate (this._now)
         }
 
-    async deploy (t0, t1)
+    async deploy (t0, t1, margin=0)
         {
         if  (! this._scene || ! this._scene.isScene)
             {
@@ -1056,14 +1123,14 @@ class planet extends entity
             this.create_planet ()
             }
             
-        const r = this.get_orbit_data (t0, t1)
+        const r = this.get_orbit_data (t0 - margin, t1 + margin)
 
-        return r.then (() =>
+        return r.then ((status) =>
             {
             // Update planet position to current time 
-            this.update_position (this._now)
+            this.update_position (this._now, true)
 
-            super.deploy ()
+            return super.deploy (status)
             }) ;
         }
 
@@ -1296,6 +1363,17 @@ class planet extends entity
 
         this._label.position.fromArray ( [0, x, 0] )
 
+        /* Create a line for visualization purposes //
+        const line_material = new THREE.LineBasicMaterial( { color: 0x0000ff } )
+        const points = []
+        points.push( new THREE.Vector3( 0, 0, 0 ) )
+        points.push( new THREE.Vector3( 1, 0, 0 ) )
+        const line_geometry = new THREE.BufferGeometry().setFromPoints( points )
+        this._line = new THREE.Line( line_geometry, line_material )
+
+        this._obj.add (this._line)
+        */
+
         this._obj.add (this._planet)
         this._scene.add (this._obj)
         }
@@ -1316,6 +1394,20 @@ class planet extends entity
         super.dispose ()
         }
 
+    get ssc_id ()
+        {
+        return this._ssc_id
+        }   
+
+    get id ()
+        {
+        return this._id
+        }
+
+    get origin ()
+        {
+        return this._origin
+        }
 
     get is_planet ()
         {
@@ -1423,9 +1515,12 @@ class spacecraft extends entity
        const res = orbit_class_to_res (this._orbit_class, this._cadence)
        const min_res =  min_allowed_res (t0, t1, this._cadence)
 
-       console.log ("id %s res %s min %s orbit %s", this._id, res, min_res, this._orbit_class)
+       // console.log ("id %s res %s min %s orbit %s", this._id, res, min_res, this._orbit_class)
 
-       return SSC_WS.get_orbit_data (this._id, t0, t1, Math.min (res, min_res), 'GSE', COORD_Unit.RE)
+       // alert (`res: ${res}, min_res: ${min_res}`)
+
+
+       return SSC_WS.get_orbit_data (this._id, t0, t1, Math.min (res, min_res), SSC_Coord_Sys.GSE, COORD_Unit.KM)
             /*
            .then ( (r) =>
                {
@@ -1438,7 +1533,7 @@ class spacecraft extends entity
        }
    
 
-    async deploy (t0, t1)
+    async deploy (t0, t1, margin=0)
         {
         if  (! this._scene || ! this._scene.isScene)
             {
@@ -1454,10 +1549,10 @@ class spacecraft extends entity
             console.log ('creating new spacecraft')
             }
             
-        const r = this.get_orbit_data (t0, t1)
+        const r = this.get_orbit_data (t0 - margin, t1 + margin)
         //const r = true
 
-        return r.then (() =>
+        return r.then ((status) =>
             {
             // Stash the orbit data somewhere
             this.dispose_orbit (true)
@@ -1468,16 +1563,17 @@ class spacecraft extends entity
 
             console.log ("new orbit created.")
 
-            this.create_direction_indicator ()
+            this.create_direction_indicator (t0)
 
             console.log ("direction indicator created.")    
 
             // Update spacecraft position to current time 
-            this.update_position (this._now)
+            // console.log ("updating position to current time: ", new Date(this._now).toUTCString())
+            this.update_position (this._now, true)
 
             console.log ("s/c position updated.")
 
-            super.deploy ()
+            return super.deploy (status)
             }) ;
         }
 
@@ -1496,10 +1592,27 @@ class spacecraft extends entity
             Orbit_Data.decimate (
                 Orbit_Data.get_relative_orbit_data (
                     this._id, 
-                    center
+                    center,
+                    COORD_System.GSE,
+                    this._tstart,
+                    this._tend
                     )), DATA_Format.COORD) 
 
-        const time  = Orbit_Data.decimate (Orbit_Data.get_time_vector (this._id))
+        const time  = Orbit_Data.decimate (Orbit_Data.get_time_vector (this._id, this._tstart, this._tend))
+
+
+        // Add the start and end positions to the orbit and time arrays to ensure the full range is covered.
+        const start_pos = Orbit_Data.get_relative_pos (this._id, this._tstart, center, true)
+
+        const end_pos = Orbit_Data.get_relative_pos (this._id, this._tend, center, true)
+
+        orbit.unshift (start_pos.x, start_pos.y, start_pos.z)
+        orbit.push (end_pos.x, end_pos.y, end_pos.z)
+
+        time.unshift (this._tstart)
+        time.push (this._tend)
+
+        // Find the start and end points of the orbit track to plot. 
 
         // Probably should add a verbose mode for extra logging like this.
         // console.log ("Total number of time points after decimation: " + time.length)
@@ -1523,13 +1636,18 @@ class spacecraft extends entity
             const time_slice = time.slice (start, stop)
             const orbit_slice = orbit.slice (start * 3, stop * 3)
 
-
             // console.log ("slice parameters: ", start, stop, start * 3, stop * 3)
 
             // Add in the geometry for the line
             //line.setPoints (Frame_to_DS (GSE_to_ANY (this.orbit_as_single_array (true), system, this._time)))
             // line.setPoints (Frame_to_DS (GSE_to_ANY (this.orbit_as_single_array (true), system, this._time)))
-            line.setPoints (Frame_to_DS (GSE_to_ANY (orbit_slice, system, time_slice))) // need to update this?
+
+            // This partially handles GSE_to_ANY errors, but may need make it more robust.
+            const target = GSE_to_ANY (orbit_slice, system, time_slice)
+
+            const points = target? target : orbit_slice
+
+            line.setPoints (Frame_to_DS (DU (points))) // need to update this?
 
             // Create the line material                   
             const material = new MeshLineMaterial (
@@ -1556,23 +1674,31 @@ class spacecraft extends entity
             }
         }
 
-    create_direction_indicator (center = this._coord_center, system = this._coord_system)
+    create_direction_indicator (time = 0, center = this._coord_center, system = this._coord_system)
         {
+        // Test with http://localhost:5173/?start=20130901T000000Z&stop=20130902T000000Z&spacecraft=goes14;messenger
+
         const cone = new THREE.ConeGeometry (0.04, .10, 16)
 
         this._direct = new THREE.Mesh (cone, this._common_direct_material) 
+
+        // Time should be the beginning of the displayed orbit track
+
+        const index = time? Orbit_Data.time_to_index (this._id, time, false) : 0
+
+        console.log("Creating direction indicator at index: ", index)
 
         // this._direct.position.fromArray (this._points, 0)
         // this._direct.position.fromArray (xyz (GSE_to_WS (this._orbit [0])))
         // this._direct.position.fromArray (this.orbit_to_WS (0, frame))
         // this._direct.position.fromArray (this.orbit_to_DS (0, system))
-        this._direct.position.fromArray (xyz (this.index_to_DS (0, center, system)))
-        
+        this._direct.position.fromArray (xyz (this.index_to_DS (index, center, system)))
+
         //const target = new THREE.Vector3 ().fromArray (this._points, 3)
         //const target = new THREE.Vector3 ().fromArray (xyz (GSE_to_WS (this._orbit [1])))
         //const target = new THREE.Vector3 ().fromArray (this.orbit_to_WS (1, frame))
         //const target = new THREE.Vector3 ().fromArray (this.orbit_to_DS (1, system))
-        const target = new THREE.Vector3 ().fromArray (xyz (this.index_to_DS (1, center, system)))
+        const target = new THREE.Vector3 ().fromArray (xyz (this.index_to_DS (index + 1, center, system)))
 
         target.sub (this._direct.position)
         target.normalize ()
@@ -1657,7 +1783,7 @@ class spacecraft extends entity
 
             // Create the new orbit
             this.create_orbit ()
-            this.create_direction_indicator ()
+            this.create_direction_indicator (this._tstart)
 
             this._color_request = null
             }
@@ -1678,7 +1804,7 @@ class spacecraft extends entity
             this.create_spacecraft ()
 
             // update the spacecraft position
-            this.update_position (this._now)
+            this.update_position (this._now, true)
 
             this._shape_request = null
             }
@@ -1697,7 +1823,7 @@ class spacecraft extends entity
             // Create the new orbit
             this.create_orbit (center, system)
 
-            this.create_direction_indicator (center, system)    
+            this.create_direction_indicator (this._tstart, center, system)
 
             this.update_position (this._now)
             }
@@ -1810,7 +1936,7 @@ export class virtual_entity extends entity
             // the data source to SSC_WS.  
             // Eventually, we may want to extend to extend it to other products such as
             // ground stations or magnetic footprints.
-            return SSC_WS.get_orbit_data (this._id, t0, t1, 12, 'GSE', COORD_Unit.RE)
+            return SSC_WS.get_orbit_data (this._id, t0, t1, 12, SSC_Coord_Sys.GSE, COORD_Unit.KM)
             }
 
         if  (this._data_source === DATA_Source.CCMC)
@@ -1829,20 +1955,19 @@ export class virtual_entity extends entity
         return Promise.resolve () // maybe should reject if data source is unknown?
         }
 
-    async deploy (t0, t1)
+    async deploy (t0, t1, margin=0)
         {
         this._tstart = t0
         this._tend = t1
 
         console.log ("Deploying virtual entity with id = ", this._id)
             
-        const r = this.get_orbit_data (t0, t1)
+        const r = this.get_orbit_data (t0 - margin, t1 + margin)
         //const r = true
 
-        return r.then (() =>
+        return r.then ((status) =>
             {
-            console.log ("thened...")
-            super.deploy ()
+            return super.deploy (status)
             }) ;
         }
 
@@ -2075,12 +2200,12 @@ export class entity_manager
         }
 
 
-    add (actor)
+    add (actor, coord_system = this._coord_system)
         {        
         actor.set_scene_reference (this.scene)
         actor.set_display (this.x_disp, this.y_disp)
         actor.set_time (system_time.time)
-        actor.set_coord_system (this._coord_system)
+        actor.set_coord_system (coord_system)
         actor.set_coord_center (this._coord_center)
         actor.set_label_color (this.text_color)
 
@@ -2108,7 +2233,6 @@ export class entity_manager
 
         pl.display_terminator (this._terminator_line)
         pl.set_label_visible (this._show_labels_planets)
-
 
         return this.add (pl)
         }
@@ -2265,7 +2389,7 @@ export class entity_manager
 
     set_start_time (t=0)
         {
-        console.log ("start time: ", t)
+        console.log ("setting start time: ", new Date(t).toUTCString())
 
         if  (t > 0)
             {
@@ -2403,7 +2527,7 @@ export class entity_manager
 
     set_end_time (t=0)
         {
-        console.log ("end time: ", t)
+        console.log ("setting end time: ", new Date(t).toUTCString())
 
         if  (t > 0)
             {
@@ -2424,7 +2548,16 @@ export class entity_manager
 
         const msgid = (actor.is_sc) ? this._msg_portal.add_alert (ALERT.data_loading) : null
 
-        return actor.deploy (this._start_time, this._end_time)
+        // Calculate a 5% margin for the start and end times that is in increments of an hour and will
+        // always be at least an hour.
+
+        // Calculate the time delta between the start and end times.
+        const delta = (this._end_time - this._start_time) 
+
+        // Use the time delta to calculate a 5% margin for the start and end times.
+        const margin = Math.max (MSEC_PER_HOUR, Math.round ((delta * 0.05) / MSEC_PER_HOUR) * MSEC_PER_HOUR)
+
+        return actor.deploy (this._start_time, this._end_time, margin)
             .then (() =>
                 {
                 if  (actor.is_sc)
@@ -2451,7 +2584,10 @@ export class entity_manager
                 console.warn ("Removing actor with id %s due to failed update", actor.id)
                 this.remove (actor.id)
 
-                return actor.id
+                // Check to make sure that the actor is not a virtual entity before returning
+                // the id so that spacecraft selection menu doesn't try to remove it from the 
+                // list of spacecraft.  Virtual entities are not in that list.
+                return actor.is_virtual? false : actor.id
                 })
         }
 
@@ -2470,7 +2606,7 @@ export class entity_manager
             {
             case (this.time_range_update):
 
-                this.set_time (0)
+                this.set_time (system_time.time)
                 // new Calculate_Planet_Orbit ().reset ()  //Singleton Class
 
                 // falls through
