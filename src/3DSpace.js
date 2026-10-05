@@ -378,7 +378,6 @@ class display_space
         // Add axes
         this._axes = new Axes (this.scene, 1, this.entity_manager.unit)
         this._axes.update_axes ()
-        this._axes_length = this._axes.axes_length
 
         // Add the heliopause and bowshock meshes
         this._mhd = new MHDPause (this.scene) 
@@ -748,7 +747,7 @@ class display_space
 
                 this.target (pl.dist, this.get_camera_vector ('X'), new THREE.Vector3 (0, 0, 0))
 
-                this.update_axes_length (pl.def_axis_len)
+                this.set_axes_length (pl.def_axis_len)
 
                 this._target_label = pl.name
 
@@ -796,183 +795,6 @@ class display_space
         return null // Return something else on invalid frame?
         }
             
-        // Return value.
-        // When not an empty string, an appropriate message that the coordinate system has 
-        // changed.  This is used by Manager.set_frame.
-        /*
-        let coord_reset_msg = ""
-
-        if (frame === "EARTH" )
-            {
-            if  (frame !== coord_system_to_frame (this.entity_manager.coord_system))
-                {
-                }
-
-            this.entity_manager.set_coord_center ()
-
-            this.entity_manager.clear_focus ()
-
-            let pl = PLANETS.find (item => item.id === frame)
-
-            distance = (pl)? pl.dist : distance
-            
-            this._target_label = "Earth"
- 
-        */
-            /*
-            if  (frame === coord_system_to_frame (this.entity_manager.coord_system))
-                {
-                this.entity_manager.clear_focus ()
-
-                let pl = PLANETS.find (item => item.id === frame)
-
-                distance = (pl)? pl.dist : distance
-                
-                this._target_label = "Earth"
-                }
-
-            else 
-                {
-                // Just set the focus to the earth
-                return this.set_focus ("EARTH", false)
-                }
-            */
-        /*
-            }
-
-        else if (frame === "SUN")
-            {            
-            if  (frame !== coord_system_to_frame (this.entity_manager.coord_system))
-                {
-                this.entity_manager.set_coord_system (DEF_HELIO_COORD_SYS)
-
-                const new_system = coord_system_to_key (DEF_HELIO_COORD_SYS)
-
-                this.set_unit (get_default_unit (DEF_HELIO_COORD_SYS))
-
-                coord_reset_msg = `Coordinate has been changed to ${new_system} to align
-                         with new target`
-                }
-
-            this.entity_manager.set_coord_center ()
-
-            this.entity_manager.clear_focus ()
-
-            let pl = PLANETS.find (item => item.id === frame)
-
-            distance = (pl)? pl.dist : convert (distance, COORD_Unit.RS, COORD_Unit.RE)
-
-            this._target_label = "Sun"
-        */
-
-
-            /*
-            if  (frame === coord_system_to_frame (this.entity_manager.coord_system))
-                {
-                this.entity_manager.clear_focus ()
-
-                let pl = PLANETS.find (item => item.id === frame)
-
-                distance = (pl)? pl.dist : convert (distance, COORD_Unit.RS, COORD_Unit.RE)
- 
-                this._target_label = "Sun"
-                }
-
-            else 
-                {
-                // Just set the focus to the sun
-                return this.set_focus ("SUN", false)
-                }
-            */
-        /*
-            }
-
-        else if (frame === "MOON")
-            {
-            if  (frame !== coord_system_to_frame (this.entity_manager.coord_system))
-                {
-                this.entity_manager.set_coord_system (DEF_LUNAR_COORD_SYS)
-
-                const new_system = coord_system_to_key (DEF_LUNAR_COORD_SYS)
-
-                this.set_unit (get_default_unit (DEF_LUNAR_COORD_SYS))
-
-                coord_reset_msg = `Coordinate has been changed to ${new_system} to align
-                         with new target`
-                }
-
-            this.entity_manager.set_coord_center ()
-
-            this.entity_manager.clear_focus ()
-
-            let pl = PLANETS.find (item => item.id === frame)
-
-            distance = (pl)? pl.dist : distance
-            
-            this._target_label = "Moon"
-            }
-
-        else
-            {
-            // Otherwise, we are focusing on a planetary without a defined coordinate system.  
-            // In this case we will just switch the focus to the planet and if relative orbits
-            // are enabled we will switch to GSE and set the coordinate center to the planet.
-            if (enable_relative_orbits)
-                {
-                coord_reset_msg = `Viewing spacecraft relative to ${frame} in GSE-aligned coordinate system.`
-
-                // Check for GSE here.  If it's not GSE then we will switch to GSE 
-                // and update the coordinate center to the requested object.  If it 
-                // is GSE then we will just update the coordinate center.
-                if  (this.entity_manager.coord_system !== COORD_System.GSE)
-                    {
-                    this.entity_manager.set_coord_system (COORD_System.GSE)
-
-                    const new_system = coord_system_to_key (COORD_System.GSE)
-
-                    this.set_unit (get_default_unit (COORD_System.GSE))
-
-                    // This is probably too long for the current message box. 
-                    //  We may want to shorten it or split it into two messages.
-                    coord_reset_msg += ` Coordinate system has been changed to ${new_system} to support relative
-                                            orbit display.`
-                    }
-                
-
-                // Not implemented yet.
-                // this._sub_title = 'Body-Centered GSE' ?? Check wording here
-
-                this.entity_manager.set_coord_center (frame)
-
-                this._target_label = this.entity_manager.get (frame).name
-                }
-
-            else
-                {
-                this.entity_manager.set_coord_center (null)
-                this.set_focus (frame)
-
-                // Not best logic, but it should work.
-                return ""
-                }
-
-            // this.entity_manager.set_focus (frame)
-            }
-
-        document.dispatchEvent (this._focus_change_event)
-
-        const target = new THREE.Vector3 (0., 0., 0.)
-
-        // this.state.camera.position.addVectors (target, this.get_camera_vector ("X", distance)) ;
-        // this.state.camera.lookAt (target) ;
-        // this.set_camera_position (target, distance, this.get_camera_vector ('X'))
-        this._controls.target.copy (target)
-        this.target (distance, this.get_camera_vector ('X'))  //No need to specify target
-
-        return coord_reset_msg
-        }
-        */
-
     update_camera_to_follow (refocus=false)
         {
         const actor = this.entity_manager.get_focus ()
@@ -1016,11 +838,11 @@ class display_space
         //const system = this.entity_manager.coord_system
         //const frame = this.entity_manager.reference_frame
 
-        this._xz_grid.update_grid (this.entity_manager.unit)
+        this._xz_grid.update_grid (null, this.entity_manager.coord_system)
 
-        this._yz_grid.update_grid (this.entity_manager.unit)
+        this._yz_grid.update_grid (null, this.entity_manager.coord_system)
 
-        this._xy_grid.update_grid (this.entity_manager.unit)
+        this._xy_grid.update_grid (null, this.entity_manager.coord_system)
         }
 
     time_from_slider_position (pos)
@@ -1039,54 +861,6 @@ class display_space
         const slider_range = this.slider_width - 1
     
         return  Math.round (slider_range * (time - start_time) / (end_time - start_time)) + 1
-        }
-
-
-    switch_camera_old ()
-        {
-        // Update the view parameters for each camera.
-        const target = this._controls.target.clone ()
-
-        // Get the distance from the camera to the target.  If we are using 
-        let dist_to_target = (this._controls)? this._camera.position.distanceTo (target) : DEF_FOCUS_DISTANCE
-        
-        if  (this._controls)
-            {
-            console.log (" focus ", this._controls.focus_dist, " zoom ", dist_to_target / this._camera.zoom)
-            }
-
-        if  (this._camera.isOrthographicCamera)
-            {
-            dist_to_target = dist_to_target / this._camera.zoom
-            }
-
-        // Get rid of the Orbit Controls object. 
-        this._controls.dispose ()
-
-        const direction = new THREE.Vector3 ().subVectors(this._camera.position, target).normalize ()
-
-        this._camera = (this._camera.isOrthographicCamera === true)? this._persp_camera : this._ortho_camera 
-
-        /*
-        if  (this._camera.isOrthographicCamera === true)
-            {      
-            this._persp_camera.position.addVectors (target, direction.multiplyScalar (dist_to_target))
-            this._camera = this._persp_camera 
-            }
-
-        else
-            {
-            this._ortho_camera.position.addVectors (target, direction.multiplyScalar (ORTHO_TARGET_DIST))
-            this._ortho_camera.zoom = ORTHO_TARGET_DIST / dist_to_target
-            this._ortho_camera.updateProjectionMatrix ()
-            this._camera = this._ortho_camera
-            }
-        */
-
-        this._camera.lookAt (target) 
-        this._controls = new my_orbital_controls (this._camera, this._display, this.entity_manager)
-        this._controls.target.copy (target)
-        this._controls.update ()             
         }
 
     update_camera_view ()
@@ -1226,21 +1000,18 @@ class display_space
         {
         this.entity_manager.set_unit ( unit )
 
-        console.log (">>> setting unit: ", unit)
-
-        // this._axes.set_coord_units (unit)
-        // this._axes.update_axes ()
-
         return unit
         }
 
-    update_axes_length (...args)
+    set_axes_length (...args)
         {
-        console.log ("axes length: ", args [0])
-
         this._axes.update_axes_length (...args)
         this._axes.update_axes ()
-        this._axes_length = this._axes.axes_length
+        }
+
+    set_axes_visibility (state = true)
+        {
+        this._axes.set_axes_visible (state)
         }
 
     update_time ()
@@ -1402,6 +1173,16 @@ class display_space
         return true
         }
 
+    get axes_visible ()
+        {
+        return this._axes.visible
+        }
+
+    get axes_length ()
+        {
+        return this._axes.axes_length
+        }
+
     get text_color ()
         {
         return this.entity_manager.text_color 
@@ -1532,7 +1313,7 @@ class display_space
             this._mhd.set_visibility (false)
             this._bowshock.set_visibility (false)
 
-            this._axes.update_axes_length (0)
+            this._axes.set_axes_invisible ()
             this._axes.update_axes ()
 
             this.entity_manager.set_label_visible (false)
@@ -1549,7 +1330,7 @@ class display_space
             this._mhd.set_visibility (this._mhd_visible)
             this._bowshock.set_visibility (this._bowshock_visible)
 
-            this._axes.update_axes_length (this._axes_length)
+            this._axes.set_axes_visible ()
             this._axes.update_axes ()
 
             // alert ("all: " + this._labels_visible_all + " sc: " + this._labels_visible_sc + " planet: " + this._labels_visible_planet)

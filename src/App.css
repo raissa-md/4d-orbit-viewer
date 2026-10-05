@@ -310,6 +310,41 @@ sup {font-size:small; vertical-align:middle;}
   overflow-y: scroll;
 }
 
+.help_text p {
+  margin: 1em 0;
+}
+.help_text h1 {
+  font-size: 1.5em;
+  margin: 0.6em 0 0.4em 0;
+  font-weight: bold;
+}
+
+.help_text h2 {
+  margin: 0.6em 0 0.4em 0;
+}
+
+.help_text h3 {
+  margin: 0.6em 0 0.4em 0;
+}
+
+.help_text th, 
+.help_text td {
+  text-align: left;
+  padding: 5px 8px; 
+}
+
+.help_text ul, .help_text ol {
+  margin: 1em 0;
+  padding-left: 2rem;
+}
+
+.help_text em {
+  font-style: italic;
+  font-weight: bold;
+  font-size: small;
+  speak: never;
+}
+
 .transport_bar {
   box-sizing: border-box ;
   height: 120px;

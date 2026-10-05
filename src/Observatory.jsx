@@ -1317,8 +1317,6 @@ class Options extends React.Component
         super (props) ;
         
         this.state = {
-            axes_length_slider_disable: this.props.axes_length === 0,
-            axes_length: this.props.axes_length === 0 ? 1 : this.props.axes_length,
             display_bg_palette: false, 
             }
 
@@ -1333,22 +1331,10 @@ class Options extends React.Component
             8:  '8',
             }
 
-        this.toggle_axes = this.toggle_axes.bind (this) ;
-        this.update_axes_length = this.update_axes_length.bind (this) ;
-        this.toggle_bg_color_palette = this.toggle_bg_color_palette.bind (this) ;
-        this.create_bg_color_palette = this.create_bg_color_palette.bind (this) ;
-        }
-
-    toggle_axes (event)
-        {
-        const new_state = this.state.axes_length_slider_disable? false: true ;
-
-        this.props.toggle_axes_display (event) ;
-
-        this.setState ({
-            axes_length_slider_disable: new_state,
-            axes_length: 1,
-            }) ;
+        this.toggle_bg_color_palette = this.toggle_bg_color_palette.bind (this) 
+        this.create_bg_color_palette = this.create_bg_color_palette.bind (this) 
+        this.set_axes_visibility = this.set_axes_visibility.bind (this) 
+        this.set_axes_length = this.set_axes_length.bind (this) 
         }
 
     create_bg_color_palette ()
@@ -1395,11 +1381,16 @@ class Options extends React.Component
         this.setState ({display_bg_palette: ! this.state.display_bg_palette}) ;
         }
 
-    update_axes_length (new_axes_length)
+    set_axes_visibility (visible)
         {
-        this.props.update_axes_length (new_axes_length) ;
+        V3DSpace.set_axes_visibility (visible) 
+        this.forceUpdate() 
+        }
 
-        this.setState({axes_length: new_axes_length}) ;
+    set_axes_length (length)
+        {
+        V3DSpace.set_axes_length (length) 
+        this.forceUpdate() 
         }
 
     render ()
@@ -1484,8 +1475,8 @@ class Options extends React.Component
                         Display Axes
                     </V_Tooltip>
                     <Switch 
-                        onChange={this.toggle_axes }
-                        checked={! this.state.axes_length_slider_disable}
+                        onChange={this.set_axes_visibility}
+                        checked={V3DSpace.axes_visible}
                         />
                 </div>
                 <div className='grid-row op-text grid-col-span'>
@@ -1502,11 +1493,11 @@ class Options extends React.Component
                         <Slider 
                             min={1}
                             max={8}
-                            value={this.state.axes_length}
+                            value={V3DSpace.axes_length}
                             marks={this.marks}
                             dots={true}
-                            disabled={this.state.axes_length_slider_disable}
-                            onChange={this.update_axes_length}
+                            disabled={! V3DSpace.axes_visible}
+                            onChange={this.set_axes_length}
                             />
                     </div>
                 </div>
@@ -2388,7 +2379,6 @@ class Base_Layout extends React.Component
 
         this.state =  {
             l_sidebar_visible: false,
-            axes_length: 1,
             show_options_dialog: false,
             show_save_dialog: false,
             show_image_dialog: false, // needed
@@ -2442,8 +2432,6 @@ class Base_Layout extends React.Component
         this.update_save_target=this.update_save_target.bind (this) 
         this.update_img_save_target=this.update_img_save_target.bind (this)
         this.update_log_save_target=this.update_log_save_target.bind (this)
-        this.update_axes_length =this.update_axes_length.bind (this) ;
-        this.toggle_axes_display = this.toggle_axes_display.bind (this) ;
         this.update_bg_color=this.update_bg_color.bind (this) ;
         this.toggle_hide_time_control=this.toggle_hide_time_control.bind (this) ;
         this.toggle_show_decals=this.toggle_show_decals.bind (this)
@@ -2476,22 +2464,6 @@ class Base_Layout extends React.Component
         document.getElementById('bg').style.backgroundColor = color.hex
         
         this.setState ({bgcolor: color.hex}) ;
-        }
-
-    update_axes_length (new_axes_length)
-        {
-        V3DSpace.update_axes_length (new_axes_length)
-
-        this.setState ({axes_length: new_axes_length}) ;
-        }
-
-    toggle_axes_display ()
-        {
-        const new_axes_length = (this.state.axes_length === 0)? 1 : 0
-
-        V3DSpace.update_axes_length (new_axes_length)
-
-        this.setState ({axes_length: new_axes_length,}) ;
         }
 
     toggle_hide_time_control ()
@@ -2532,7 +2504,7 @@ class Base_Layout extends React.Component
                     <ReactMarkdown 
                         children={text} 
                         remarkPlugins={[remarkGfm]}
-                        /> ;
+                        /> 
                 </div> ;
 
         const modal = <V_Modal
@@ -2610,52 +2582,8 @@ class Base_Layout extends React.Component
 
     create_options_dialog ()
         {
-        /*
-        <Modal
-            title={'Options'}
-            icon={null}
-            centered={true}
-            width={opt_dlg_width (dx)}
-            style={get_dlg_style (dx, opt_dlg_width)}
-            open={this.state.show_options_dialog}
-            onCancel={this.close_option_menu}
-            footer={[
-                <Button type="primary" onClick={this.close_option_menu}>
-                    Done
-                </Button>,
-                ]}
-            >
-            <Options
-                update_axes_length={this.update_axes_length}
-                toggle_axes_display={this.toggle_axes_display}
-                axes_length={this.state.axes_length}
-                bgcolor={this.state.bgcolor}
-                update_bg_color={this.update_bg_color}
-                hide_time_control={this.state.hide_time_control}
-                show_decals={this.state.show_decals}
-                show_planet_decals={this.state.show_planet_decals}
-                toggle_show_decals={this.toggle_show_decals}
-                toggle_show_planet_decals={this.toggle_show_planet_decals}
-                show_sc_position={this.state.show_sc_position}
-                toggle_show_sc_position={this.toggle_show_sc_position}
-                toggle_hide_time_control={this.toggle_hide_time_control}
-                set_xz_grid_options={this.set_xz_grid_options}
-                set_yz_grid_options={this.set_yz_grid_options}
-                set_xy_grid_options={this.set_xy_grid_options}
-                update_save_target={this.update_log_save_target}
-                save={this.state.log_save_to_file}
-                save_file_name={this.state.log_save_file_name}
-                update_save_file_name={this.update_log_save_file_name}
-                log_action={this.save_or_display_log}
-
-                />
-        </Modal>
-        */
         return (
             <Options
-                update_axes_length={this.update_axes_length}
-                toggle_axes_display={this.toggle_axes_display}
-                axes_length={this.state.axes_length}
                 bgcolor={this.state.bgcolor}
                 update_bg_color={this.update_bg_color}
                 hide_time_control={this.state.hide_time_control}
@@ -3338,7 +3266,6 @@ class Base_Layout extends React.Component
                     update_master_time={this.props.update_master_time}
                     transport_bar_help={this.display_transport_bar_help_dialog}
                     time={this.props.time}
-                    axes_length={this.state.axes_length * Number (! this.state.dark_screen)}
                     hide_time_control={this.state.hide_time_control}
                     block_transport_bar={this.state.dark_screen}
                     disable_field_boundaries={this.props.disable_field_boundaries}
@@ -3697,60 +3624,7 @@ class Manager extends React.Component
         }
 
     get_new_color (color, record) 
-        {
-        /*
-        const { confirm } = Modal ;
-
-        this.modal_width = 400 ;
-        this.orbit_recolor_key = record.key ;
-
-        this.color_select = confirm (
-            {
-            title: 'Select Orbit Color',
-            okButtonProps: {onClick: this.handle_OK},
-            content: <SketchPicker   
-                        onChangeComplete={ this.handle_color_response } 
-                        color={color}
-                        width={this.modal_width * .85} 
-                        disableAlpha={ true }
-                        />,
-            icon: null,
-            onOk () {},
-            onCancel () {},
-            }) ;
-        */          
-        /*
-        this.modal_width = 400 ;
-
-        this.orbit_recolor_key = record.key ;
-
-        const select = <SketchPicker   
-                            onChangeComplete={ this.handle_color_response } 
-                            color={color}
-                            width={this.modal_width * .85} 
-                            disableAlpha={ true }
-                            /> ;
-
-        this.setState ({color_select: select}) ;
-
-        const modal = <V_Modal
-            title='Select Orbit Color'
-            content= {select}
-            width= {MIN_DIALOG_WIDTH}
-            onClose={() => this.setState({ color_dialog: null, color_select: null })}
-            ref={this.ui}
-            buttons={[
-                { 
-                label: "Cancel", 
-                },
-                {
-                label: "OK",
-                onClick: () => {this.handle_OK () ; return false},
-                }
-                ]}
-            /> ;
-        */
-        
+        {        
         this.setState ({show_color_dialog: true, color: color, orbit_recolor_key: record.key,}) ;
         } 
 

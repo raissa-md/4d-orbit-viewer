@@ -2,6 +2,7 @@ import * as THREE from "three"
 
 import { COORD_System } from './Orbit.js'
 import { COORD_Unit } from "./Orbit.js"
+import { get_display_unit } from "./Orbit.js"
 import { sun_position } from './Orbit.js'
 import { GEI_to_GSE } from './Orbit.js'
 import { ANY_to_GSE } from "./Orbit.js"
@@ -12,6 +13,7 @@ import { RD2DEG } from "./Orbit.js"
 import { gmst } from "./Orbit.js"
 import { GEI_to_GEO } from "./Orbit.js"
 import { convert } from "./Orbit.js"
+import { get_default_coord_sys } from "./Orbit.js"
 
 import { AXIS_X, AXIS_Y, AXIS_Z } from './Orbit_Display'
 
@@ -28,7 +30,7 @@ export class Axes
         this.axes_end_points = null 
 
         this.axes_size = 1
-        this.unit = COORD_Unit.RE
+        this._unit = unit
         this.ratio = 1
 
         this.axes = null 
@@ -61,12 +63,12 @@ export class Axes
         this.create_end_markers ()
         this.create_axes ()
 
-        this.set_coord_units (unit)
+        this.set_coord_units (this._unit)
 
         this.update_axes_length (axes_length)
         
-        document.addEventListener ("unit_change_evt", e => {
-            this.set_coord_units (e.detail.unit)
+        document.addEventListener ("coord_change_evt", e => {
+            this.coordinate_system_to_unit (e.detail.system)
             this.update_axes ()
             })
 
@@ -80,36 +82,35 @@ export class Axes
         this.create_axis_tick_marks = this.create_axis_tick_marks.bind (this)
         this.resize_axes = this.resize_axes.bind (this)
         }
-    
-    update_axes_length (axes_length = 0)
+
+    set_axes_visible (visible = true)
         {
-        // This has to be rewritten.  We need to completely recreate axes every time the
-        // Size or coordinate system changes.
-
-        if  (axes_length !== 0)
+        if  (visible)
             {
-            if  (this._axes_length === 0)
+            if  (this.axes.visible)
                 {
-                this.axes.visible = true 
-
-                this.x_axis_mark.visible = true
-                this.y_axis_mark.visible = true
-                this.z_axis_mark.visible = true
-
-                this.set_tick_marks_visible (this.x_axis_tick_marks, true)
-                this.set_tick_marks_visible (this.y_axis_tick_marks, true)
-                this.set_tick_marks_visible (this.z_axis_tick_marks, true)   
+                return
                 }
 
-            this._axes_length = axes_length
-            this.axes_size = axes_length + 1
+            this.axes.visible = true
 
-            this.resize_axes () 
+            this.x_axis_mark.visible = true
+            this.y_axis_mark.visible = true
+            this.z_axis_mark.visible = true
+
+            this.set_tick_marks_visible (this.x_axis_tick_marks, true)
+            this.set_tick_marks_visible (this.y_axis_tick_marks, true)
+            this.set_tick_marks_visible (this.z_axis_tick_marks, true)
             }
 
         else
             {
-            this.axes.visible = false 
+            if  (! this.axes.visible)
+                {
+                return
+                }
+
+            this.axes.visible = false
 
             this.x_axis_mark.visible = false
             this.y_axis_mark.visible = false
@@ -118,11 +119,27 @@ export class Axes
             this.set_tick_marks_visible (this.x_axis_tick_marks, false)
             this.set_tick_marks_visible (this.y_axis_tick_marks, false)
             this.set_tick_marks_visible (this.z_axis_tick_marks, false)
+            }
+        }
+
+    set_axes_invisible ()
+        {
+        this.set_axes_visible (false)
+        }
+    
+    update_axes_length (axes_length = 0)
+        {
+        // This has to be rewritten.  We need to completely recreate axes every time the
+        // Size or coordinate system changes.
+
+        if  (axes_length !== 0)
+            {
 
             this._axes_length = axes_length
-            this.axes_size = 0
-            }
+            this.axes_size = axes_length + 1
 
+            this.resize_axes () 
+            }
         }
 
     create_end_markers ()
@@ -333,17 +350,32 @@ export class Axes
 
     set_coord_units (unit)
         {
-        this.unit = unit 
+        this._unit = unit 
 
-        this.ratio = convert (1, this.unit, COORD_Unit.GSE)
+        this.ratio = convert (1, this._unit, COORD_Unit.DS)
 
         this.rescale_axis_components (this.ratio)
+        }
+
+    coordinate_system_to_unit (system = null)
+        {
+        if  (system)
+            {
+            const new_unit = get_display_unit (system)
+
+            this.set_coord_units (new_unit)
+            }
         }
 
     get axes_length ()
         {
         return this._axes_length
         }
+
+    get visible ()
+        {
+        return this.axes.visible
+        }   
     }
 
     export default Axes

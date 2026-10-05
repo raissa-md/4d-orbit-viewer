@@ -1825,6 +1825,26 @@ export function get_default_unit (system)
 
         case COORD_System.SSE :
 
+            return COORD_Unit.KM
+
+        case COORD_System.MSO :
+
+            return COORD_Unit.KM
+
+        default:
+
+            return COORD_Unit.RE
+        }        
+    }
+
+export function get_display_unit (system)
+    {
+    // Only used where the default unit grids and axes markers differs from the
+    // default unit for reporting orbit positions.
+    switch (system)
+        {
+        case COORD_System.SSE :
+
             return COORD_Unit.KM3
 
         case COORD_System.MSO :
@@ -1833,9 +1853,10 @@ export function get_default_unit (system)
 
         default:
 
-            return COORD_Unit.RE
+            return get_default_unit (system)
         }        
     }
+
 
 export function key_to_coord_system (key)
     {

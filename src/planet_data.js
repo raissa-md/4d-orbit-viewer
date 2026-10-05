@@ -60,7 +60,7 @@ export const PLANETS =
             specular: null,
             kindex: -1, 
             sscweb: true, 
-            def_axis_len: 2,
+            def_axis_len: 3,
             dist: 2,
         },
         {
@@ -105,7 +105,7 @@ export const PLANETS =
             specular: null,
             kindex: 3, 
             sscweb: false, 
-            def_axis_len: 5,
+            def_axis_len: 6,
             dist: 4,
         },
         {

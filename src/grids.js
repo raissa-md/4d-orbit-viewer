@@ -6,6 +6,7 @@ import { ANY_to_GSE } from './Orbit.js'
 import { GSE_to_WS } from './Orbit.js'
 import { COORD_System } from './Orbit.js'
 import { COORD_Unit } from './Orbit.js'
+import { get_display_unit } from './Orbit.js'
 import { convert } from './Orbit.js'
 
 const GRID_SIZE = 50 ;
@@ -58,6 +59,7 @@ class Grid extends THREE.LineSegments
         this._req_size = req_size
         this._scale = scale
         this._offset = 0
+        this._unit = unit
 
         this._grid_color = new THREE.Color ( color )
 		this._center_line_color = new THREE.Color( cntr_color ) 
@@ -68,8 +70,8 @@ class Grid extends THREE.LineSegments
 
         this.update_grid_geometry (unit)
 
-        document.addEventListener ("unit_change_evt", e => {
-            this.update_grid (e.detail.unit)
+        document.addEventListener ("coord_change_evt", e => {
+            this.update_grid (null, e.detail.system)
             })
 
         }
@@ -92,28 +94,28 @@ class Grid extends THREE.LineSegments
             this.grid.update_grid_geometry (requested_size, scale, color, cntr_color, to_gse) ;
     */
 
-    set_color (color, unit = COORD_Unit.RE)
+    set_color (color, unit = null)
         {
         this._grid_color = new THREE.Color (color)
 
         this.update_grid_geometry (unit)
         }
 
-    set_centerline_color (color, unit = COORD_Unit.RE)
+    set_centerline_color (color, unit = null)
         {
         this._center_line_color = new THREE.Color ( color )
 
         this.update_grid_geometry (unit)
         }
 
-    set_requested_size (size, unit = COORD_Unit.RE)
+    set_requested_size (size, unit = null)
         {
         this._req_size = size
 
         this.update_grid_geometry (unit)
         }
 
-    set_scale (scale, unit = COORD_Unit.RE)
+    set_scale (scale, unit = null)
         {
         this._scale = scale
 
@@ -199,9 +201,35 @@ class Grid extends THREE.LineSegments
         return this._transform 
         }
     
-    update_grid (unit = COORD_Unit.RE)
+    update_grid (unit = null, system = null)  
         {
-        const ratio = convert (1, unit, COORD_Unit.GSE)
+        // Set the base_unit to convert to GSE based on which argument, if any, is 
+        // provided (unit or system).  Note that unit has priority over system.
+
+        let base_unit
+
+        switch (true)
+            {
+            case (unit !== null):
+                
+                base_unit = unit
+
+                break
+
+            case (system !== null):
+
+                base_unit = get_display_unit (system)
+
+                break
+
+            default:
+
+                base_unit = this._unit
+
+                break
+            }
+
+        const ratio = convert (1, base_unit, COORD_Unit.DS)
 
         const ws = GSE_to_WS (this.vertices.map (p => p * ratio))
 
@@ -219,7 +247,7 @@ class Grid extends THREE.LineSegments
         return r
         }
 
-    update_grid_geometry (unit = COORD_Unit.RE)
+    update_grid_geometry (unit = this._unit)
         {
 
         // Calculate number off divisions based on requested size and grid scale
@@ -294,7 +322,7 @@ class Grid extends THREE.LineSegments
         this.material.visible = visible
         }
     
-    set_grid_position (offset = 0, unit = COORD_Unit.RE)
+    set_grid_position (offset = 0, unit = this._unit)
         {
         this._offset = offset
 
@@ -302,7 +330,7 @@ class Grid extends THREE.LineSegments
         const p = this.transform ([0, 0, this._offset])
 
         // Convert the center point to the current coordinate system.
-        const ratio = convert (1, unit, COORD_Unit.GSE)
+        const ratio = convert (1, unit, COORD_Unit.DS)
 
         const ws = GSE_to_WS (p.map (p => p * ratio))
 
