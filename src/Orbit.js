@@ -1767,7 +1767,7 @@ export function unit_to_string (unit)
 
         case COORD_Unit.KM3 :
 
-            return "1000 Kilometers (km^3)"
+            return "1000 Kilometers (10^3km)"
 
         case COORD_Unit.RS :
 
@@ -1825,11 +1825,11 @@ export function get_default_unit (system)
 
         case COORD_System.SSE :
 
-            return COORD_Unit.KM
+            return COORD_Unit.KM3
 
         case COORD_System.MSO :
 
-            return COORD_Unit.KM
+            return COORD_Unit.KM3
 
         default:
 
