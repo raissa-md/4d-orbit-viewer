@@ -2610,32 +2610,6 @@ class Base_Layout extends React.Component
 
     create_img_save_dialog ()
         {
-        /*
-        <Modal
-            title={'Save Screenshot or Video Clip'}
-            icon={null}
-            centered={true}
-            width={scr_dlg_width (dx)}
-            open={this.state.show_image_dialog}
-            style={get_dlg_style (dx, scr_dlg_width)}
-            onCancel={this.close_image_save_menu}
-            onOk={this.save_image}
-            >
-            <IMG_Save_Modal 
-                img_width={img_width}
-                img_height={img_height}
-                use_narrow_format={use_min_width (dx)}
-                // screen_capture={this.state.capture}
-                //update_bg_color={this.update_compost_bg_color}
-                // update={this.update_selected_for_save}  // used -- need to check function
-                update_save_target={this.update_img_save_target} // misnamed updates save to file flag
-                save={this.state.img_save_to_file} // flag, true if image should be saved to file
-                save_file_name={this.state.img_save_file_name} // file name of image save file.
-                update_save_file_name={this.update_img_save_file_name} //updates image save file name
-                screen_capture={this.state.screen_capture}
-                />
-        </Modal>
-        */
         // This is confusing, calling this img_width and img_height.  This should be renamed
         // to disp_width and disp_height (used to calculate how big the 'thumbnail' version
         // of the screenshot will be in the dialog box)
@@ -2713,26 +2687,6 @@ class Base_Layout extends React.Component
 
     copy_search_url ()
         {
-        /*
-        const { confirm } = Modal ;
-
-        confirm (
-            {
-            title: 'Copy URL to Recreate Display to Clipboard',
-            content: url,
-            width: MIN_DIALOG_WIDTH,
-            okText: 'Copy',
-            icon: <QuestionCircleOutlined />,
-            onOk () {navigator.clipboard.writeText(url) ; return false},
-            onCancel () {},
-            }) ;
-
-        */
-
-        //const w = parseInt (get_help_dialog_style (V3DSpace.width, V3DSpace.height).width, 10)
-
-        //const text = (use_main)? main_help : chooser_help
-
         const url = V3DSpace.create_url ()
 
         const url_display =<div 
@@ -2769,43 +2723,6 @@ class Base_Layout extends React.Component
         this.setState ({dialog_box: modal})
         }
 
-    /*
-    set_screen_capture_background (compost, clr="white")
-        {
-        const ctx = compost.getContext('2d')
-
-        ctx.beginPath ()
-        ctx.rect (0, 0, compost.width, compost.height)
-        ctx.fillStyle = clr
-        ctx.fill()
-    
-        ctx.drawImage (this.capture, 0, 0)
-        }
-    */
-
-    /*
-    add_time_date (compost)
-        {
-        const display_time = epoch_to_date_time (V3DSpace.time, true)
-
-        const ctx = compost.getContext('2d')
-
-        ctx.font = "22px Arial"
-        ctx.fillStyle = "white"
-        ctx.strokeStyle = 'DarkSlateGrey'
-        ctx.lineWidth = 2
-
-        const text = "Time: " + display_time 
-        const width = ctx.measureText (text).width
-
-        // Draw the time and date on the image
-        ctx.strokeText(text, (compost.width / 2 - width / 2).toFixed (), compost.height - 30);
-        // ctx.fillText(text, 10, compost.height - 10);
-        // ctx.fillText(text, 10, 10);
-        
-        }
-    */
-
     get_disp_dimensions (dx, dy)
         {
         const ar = V3DSpace.height / V3DSpace.width 
@@ -2826,19 +2743,6 @@ class Base_Layout extends React.Component
             return [bound_x, Math.floor (bound_x * ar)]
             }
         }
-
-    /*
-    update_compost_bg_color (color, event) ///
-        {
-        const compost = new OffscreenCanvas (V3DSpace.width, V3DSpace.height) 
-
-        this.set_screen_capture_background (compost, color.hex)
-        
-        this.add_time_date (compost)
-
-        this.setState ({compost: compost})
-        }
-    */
 
     
     open_image_save_menu (sc = null)
