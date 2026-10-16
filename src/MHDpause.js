@@ -32,13 +32,14 @@
  */
 
 //import { TagsOutlined } from "@ant-design/icons";
-import { TagsOutlined } from "@ant-design/icons";
 import * as THREE from "three";
 import { COORD_System }  from "./Orbit"
 import { GSE_to_WS } from "./Orbit"
 import { Frame_to_DS } from "./Orbit"
 import { GSE_to_ANY } from "./Orbit"
 import { Orbit_Data } from './App.jsx'
+import { Orbit_Data_Store } from './orbit_data.jsx'
+import { fa } from "zod/locales";
 
 const sdwp_modes = 
     {
@@ -55,20 +56,6 @@ export const SDWP_Modes = Object.freeze (sdwp_modes)
 export const MP_STANDOFF_DATASET = 'SWMF2023_RT_STANDOFF_P1M' // Not used right now.
 export const MP_STANDOFF_ID = 'mp_standoff'
 
-//package gov.nasa.gsfc.spdf.orb.utils;
-
-//import gov.nasa.gsfc.spdf.orb.OrbitViewer;
-//import gov.nasa.gsfc.spdf.orb.gui.SurfaceWindow;
-//import javax.media.j3d.Geometry;
-//import javax.media.j3d.GeometryArray;
-//import javax.media.j3d.IndexedQuadArray;
-//import javax.media.j3d.Material;
-//import javax.media.j3d.PolygonAttributes;
-//import javax.media.j3d.Shape3D;
-//import javax.media.j3d.Transform3D;
-//import javax.media.j3d.TransformGroup;
-//import javax.vecmath.Color3f;
-//import javax.vecmath.Color4f;
 
 /**
  * Superclass for MHDSurf and MHDPause, is never instantiated directly
@@ -78,14 +65,6 @@ export const MP_STANDOFF_ID = 'mp_standoff'
  */
 class MHD 
     {
-    // These are properties
-    //protected Shape3D shape = new Shape3D();
-    //protected Material mat = new Material();
-    //protected Color4f color = null;
-    //protected static float swp = 2.04f;
-    //protected float xmin = -45;
-    //protected static ModifiedJulianCalendar mjc = null;
-
     /**
      * Constructor for MHD
      *
@@ -94,39 +73,48 @@ class MHD
 
     constructor (scene=null, name="unnamed", sx=64, sy=64)
         {
-        this.is_visible = false 
+        this._is_visible = false 
+        this.wf_view = false
 
         this.scene = scene ; 
         this.name = name ;
-        this.shape = new THREE.Mesh () ;
-        //this.shape.transparent = true ;
-        this.shape.visible = this.is_visible 
-        this.shape.material = new THREE.MeshPhongMaterial () ;
-        this.shape.material.vertexColors = true ;
-        this.shape.material.wireframe = false ;
-        this.shape.material.transparent = true
-        this.shape.material.opacity = .4
-        this.shape.material.side = THREE.DoubleSide
-        this.shape.name = this.name ;
-        //this.shape.geometry = new THREE.BufferGeometry () ;
+        this.solid_material = new THREE.MeshPhongMaterial() 
+        this.solid_material.vertexColors = true 
+        this.solid_material.transparent = true
+        this.solid_material.opacity = .4
+        this.solid_material.side = THREE.DoubleSide
 
-        this.color = new THREE.Color ("white") ;
+        this.solid_mesh = new THREE.Mesh () 
+        this.solid_mesh.visible = this._is_visible && ! this.wf_view
+        this.solid_mesh.material = this.solid_material
+        this.solid_mesh.name = this.name + "_solid"
+
+        this.wf_material = new THREE.LineBasicMaterial () 
+        this.wf_material.transparent = true
+        this.wf_material.opacity = .2
+
+        this.wf_mesh = new THREE.LineSegments ()
+        this.wf_mesh.material = this.wf_material
+        this.wf_mesh.visible = this._is_visible && this.wf_view
+        this.wf_mesh.name = this.name + "_wf"
+
+        this.color = new THREE.Color ("white") 
         this.swpmode = SDWP_Modes.MODEL
         this.mpstandoff = null
         this.swp = 2.04 ;
         this.xmin = -45.0 ;
-        this.indices = [] ;
-        this.SIZEX = sx ;
-        this.SIZEY = sy ;
-        this.points = [] ;
-        this.coords = [] ;
-        this.colors = [] ;
-        this.normals = [] ;
-        this.index = [] ;
-        this.start = 0.0 ;
-        this.end = 360.0 ;
-        this._enabled = true 
-        this._reactivate_grid = false
+        this.mesh_indices = [] 
+        this.wf_indices = [] 
+        this.SIZEX = sx 
+        this.SIZEY = sy 
+        this.points = [] 
+        this.coords = [] 
+        this.mesh = null  
+        this.colors = [] 
+        // this.normals = [] // Normals were never implemented.
+        // this.index = [] 
+        this.start = 0.0 
+        this.end = 360.0 
 
         document.addEventListener ("coord_change_evt", e => {
             this.update (e.detail.time, e.detail.system)
@@ -157,21 +145,21 @@ class MHD
         if  (em_val === undefined)
             {
             const emissive = this.calc_emissive_color (this.color, 1.2)
-            this.shape.material.emissive.copy (emissive)
+            this.solid_material.emissive.copy (emissive)
             }
         else 
             {
-            this.shape.material.emissive.set (em_val) 
+            this.solid_material.emissive.set (em_val) 
             }
 
         if  (sp_val === undefined)
             {
-            this.shape.material.specular.copy (this.color) 
-            this.shape.material.specular.lerp (new THREE.Color (0xffffff), 0.15) 
+            this.solid_material.specular.copy (this.color) 
+            this.solid_material.specular.lerp (new THREE.Color (0xffffff), 0.15) 
             }
         else 
             {
-            this.shape.material.specular.set (sp_val) 
+            this.solid_material.specular.set (sp_val) 
             }
             
         this.swpmode = mode
@@ -182,9 +170,9 @@ class MHD
         // const diffuseColor = new THREE.Color (.9, .9, .7);
         // const specularColor = new THREE.Color (.9, .9, .7);
 
-        // this.shape.material.specular.copy (specularColor) ;
-        this.shape.material.color.copy (this.color) 
-        this.shape.material.shininess = 0.1 
+        this.solid_material.color.copy (this.color) 
+        this.wf_material.color.copy (this.color) 
+        this.solid_material.shininess = 0.1 
 
         this.buildModel ()
 
@@ -193,6 +181,11 @@ class MHD
 
     get_mp_standoff (time)
         {
+        if  (! Orbit_Data_Store.exist)
+            {
+            return false
+            }
+
         // Check if the data is available before trying to access it. 
         // I have no idea what to do if the data is not available.
         if  (! Orbit_Data.entity_data_valid (MP_STANDOFF_ID))
@@ -237,29 +230,46 @@ class MHD
 
     parent_to_scene ()
         {
-        if  (! this.scene.getObjectByName (this.name))
+        if  (this.scene === null)
             {
-            if  (this.scene !== null)
-                {
-                this.scene.add (this.shape) ;
-                }
+            return
+            }  
+
+        if  (! this.scene.getObjectByName (this.name + "_solid"))
+            {
+            this.scene.add (this.solid_mesh) 
+            }
+
+        if  (! this.scene.getObjectByName (this.name + "_wf"))
+            {
+            this.scene.add (this.wf_mesh) 
             }
         }
 
     unparent_from_scene ()
         {
-        if  (this.scene.getObjectByName (this.name))
+        if  (this.scene === null)
             {
-            if  (this.scene !== null)
-                {
-                this.scene.remove (this.shape) ;
-                }
+            return
+            }  
+
+        if  (this.scene.getObjectByName (this.name + "_solid"))
+            {
+            this.scene.remove (this.solid_mesh) 
+            }
+
+        if  (this.scene.getObjectByName (this.name + "_wf"))
+            {
+            this.scene.remove (this.wf_mesh) 
             }
         }
 
     is_in_scene ()
         {
-        return (this.scene.getObjectByName (this.name))? 1 : 0 ; 
+        const solid_exists = this.scene.getObjectByName (this.name + "_solid")
+        const wf_exists = this.scene.getObjectByName (this.name + "_wf")
+
+        return (solid_exists && wf_exists) 
         }
 
     //setMin (float newMin) 
@@ -280,83 +290,116 @@ class MHD
     //buildModel(float psw, float sina, float start, float end) 
     buildModel() 
         {
-        this.points = [] ;
-        this.coords = [] ;
-        this.colors = [] ;
-        this.normals = [] ;
-        this.indices = [] ;
+        this.points.length = 0 
+        this.coords = null 
+        this.mesh = null 
+        this.colors.length = 0 
+        // this.normals.length = 0 
+        this.mesh_indices.length = 0 
     
-        this.create_index_array () ;
+        this.create_index_array () 
         this.set_coordinate (this.swp, this.start, this.end)
-        this.update_geometry () ;
+        this.update_geometry () 
 
         if  (! this.is_in_scene ())
             {
             this.parent_to_scene () ;
-            //this.doInitialTransform () ;
             }
+
+        // Since GSE is time invariant, we can just update with time 0.
+        this.update (0, COORD_System.GSE, true)
         }
 
     create_index_array ()
         {
         // const vcounts = new Array (4 * (this.SIZEX - 1) * (this.SIZEY - 1));
-        this.indices = []
+        this.mesh_indices.length = 0
+        this.wf_indices.length = 0
 
         // vcounts is actually an index array.
         for (let i = 0 ; i < (this.SIZEX - 1); i++) 
             {
             for (let j = 0 ; j < (this.SIZEY - 1); j++) 
                 {
+                /*
+                for (let row = 0; row < ROWS; row++) 
+                    for (let col = 0; col < COLS; col++) 
+                        const a = row * (COLS + 1) + col;
+                        const b = a + 1;
+                        const c = a + (COLS + 1);
+                        const d = c + 1;
+                */                    
+                // Convert 2D (row, col) to flat 1D index. Each row contains (COLS+1) vertices
+                // This will need to be adjusted for the current loop bounds and indexing scheme.
+                const flat_index = i * (this.SIZEX) + j
+
                 const p1 = i * (this.SIZEX) + ( j + 1 )
                 const p2 = i * (this.SIZEX) + j
                 const p3 = ( i + 1 ) * ( this.SIZEX) + j
                 const p4 = ( i + 1 ) * ( this.SIZEX) + ( j + 1 )
 
-                this.indices.push (p1)
-                this.indices.push (p2)
-                this.indices.push (p4)
-                this.indices.push (p2)
-                this.indices.push (p3)
-                this.indices.push (p4)
+                this.mesh_indices.push (p1)
+                this.mesh_indices.push (p2)
+                this.mesh_indices.push (p4)
+                this.mesh_indices.push (p2)
+                this.mesh_indices.push (p3)
+                this.mesh_indices.push (p4)
+
+                // Now add the wireframe indices
+                this.wf_indices.push (p2, p1)
+                this.wf_indices.push (p2, p3)
+                this.wf_indices.push (p3, p4)
+                this.wf_indices.push (p4, p1)
                 }
             }
+
+        //console.log(this.wf_indices)
         }
 
-    update_geometry ()
+    // This will eventually be useful for independent color updates per vertex
+    create_color_array (r, g, b)
         {
-        const clr = [this.color.r, this.color.g, this.color.b] ;
+        const color = []
 
+        const clr = [r, g, b] ;
+        
         for (let ii = 0 ; ii < 6 * (this.SIZEX - 1) * (this.SIZEY - 1) ; ii++) 
             {
-            this.colors.push (...clr) ;
+            color.push (...clr) ;
             }
 
-        this.shape.geometry.setIndex (this.indices)
-
-        // const pos = new THREE.BufferAttribute (new Float32Array(this.coords), 3) ;
-        // const nrm = new THREE.BufferAttribute (new Float32Array(this.normals), 3) ;
-        const col = new THREE.BufferAttribute (new Float32Array(this.colors), 3) ;
-    
-        // this.shape.geometry.setAttribute ('position', pos ) ;  
-        // this.shape.geometry.setAttribute ('normal', nrm ) ;  
-        this.shape.geometry.setAttribute ('color', col ) ;
+        return color
         }
 
-    update (time, system = COORD_System.GSE)
+    // This should probably be renamed to create_geometry. It is only called from buildModel.
+    update_geometry ()
         {
-        if  (! this._enabled)
+        this.colors.length = 0 
+
+        this.colors = [...this.create_color_array (this.color.r, this.color.g, this.color.b)]
+
+        const col = new THREE.BufferAttribute (new Float32Array(this.colors), 3) 
+
+        this.coords = new Float32Array (this.points)
+        this.mesh = new THREE.BufferAttribute (this.coords, 3) 
+        
+        this.solid_mesh.geometry.setAttribute ('position', this.mesh ) 
+        this.solid_mesh.geometry.setAttribute ('color', col )
+        this.wf_mesh.geometry.setAttribute ('position', this.mesh ) 
+ 
+        this.solid_mesh.geometry.setIndex (this.mesh_indices)
+        this.wf_mesh.geometry.setIndex (this.wf_indices)
+
+        this.mesh.usage = THREE.DynamicDrawUsage
+        }
+
+    // This function is called every animation frame to update the geometry based on the current time.
+    // Note that set_coordinate recreates the this.points array.
+    update (time, system = COORD_System.GSE, force_update = false)
+        {
+        if  (! (this._is_visible || force_update))
             {
-            if  (this._reactivate_grid)
-                {
-                this._enabled = true
-                this.shape.visible = this.is_visible
-                this._reactivate_grid = false
-                }
-            
-            else 
-                {
-                return 
-                }
+            return 
             }
 
         if  (this.swpmode === SDWP_Modes.MODEL )
@@ -370,12 +413,22 @@ class MHD
                 this.set_coordinate (this.swp, this.start, this.end)
                 }
             }
-        
-        const coords = Frame_to_DS (GSE_to_ANY (this.points, system, time))
-        const pos = new THREE.BufferAttribute (new Float32Array (coords), 3)
-        this.shape.geometry.setAttribute ('position', pos ) 
-        
-        this.shape.geometry.computeVertexNormals ()
+
+        // Convert the points from the GSE coordinate system to the desired system at the current time.
+        // Not: this had do be done every animation frame even if the mp_standoff distance remains constant.
+        // Maybe we can skip this if we are in GSE coordinates and the standoff distance has not changed, since 
+        // GSE coordinates do not have a time dependence.
+        const update = Frame_to_DS (GSE_to_ANY (this.points, system, time))
+
+        // Update the coordinates in the buffer attribute with the transformed points.
+        this.coords.set (update)
+
+        // Mark the mesh as needing an update so that the changes to the buffer attribute are reflected.
+        this.mesh.needsUpdate = true
+
+        // Recompute the vertex normals to ensure correct lighting after the geometry update.
+        this.solid_mesh.geometry.computeVertexNormals ()
+        //this.wf_mesh.geometry.computeVertexNormals ()  // Does this actually need to be done?
         }
 
 
@@ -399,17 +452,18 @@ class MHD
         if  (diffuse !== undefined)
             {
             this.color.set (diffuse) 
-            this.shape.material.color.copy (this.color) 
+            this.solid_material.color.copy (this.color) 
+            this.wf_material.color.copy (this.color) 
             }
 
         if  (emissive !== undefined)
             {
-            this.shape.material.emissive.set (emissive) 
+            this.solid_material.emissive.set (emissive) 
             }
 
         if  (spec !== undefined)
             {
-            this.shape.material.specular.set (spec)
+            this.solid_material.specular.set (spec)
             }
 
         this.buildModel ();
@@ -419,7 +473,8 @@ class MHD
     //setOpacity(float opac) 
     set_opacity  (opac) 
         {
-        this.get_shape().material.opacity = opac 
+        this.solid_material.opacity = opac 
+        this.wf_material.opacity = opac 
         }
 
     /**
@@ -427,12 +482,8 @@ class MHD
      */
     get_shape () 
         {
-        return this.shape;  // Return shape3D
-        }
-
-    doInitialTransform() 
-        {
-
+        // Should eventually return on the active mesh (solid or wireframe) depending on the current display mode.
+        return this.solid_mesh
         }
 
     /*respond to a change in swp value on the surface window */
@@ -443,63 +494,33 @@ class MHD
 
         // This should just call update_geometry, not buildModel, since that is the only
         // thing that needs to be updated when the swp changes.  
-        this.buildModel(this.swp, 0.2, 0.0, 360.0)
+        this.update ()
 
         //OrbitViewer.getSatellitePositionWindow().SWPChanged();
         }
 
-    /*Change from surface to wireframe or screen_door
-     *@param attribute the surface or wireframe or screen_door PolygonAttributes integer value*/
-    //setPolygonAttributes (int attribute) 
-    //setPolygonAttributes (attribute) 
-    //    {
-
-    //    getShape().getAppearance().setPolygonAttributes(new PolygonAttributes(attribute,
-    //           PolygonAttributes.CULL_NONE, 0, true, 0));
-    //    }
-
-    /*Change from NICEST to SCREEN_DOOR and vice-versa
-     *@param attribute the Nicest or Screen_door transparency mode integer value*/
-    //setTransparencyAttributes(int attribute) 
-    //setTransparencyAttributes(attribute) 
-    //    {
-    //    getShape().getAppearance().getTransparencyAttributes().setTransparencyMode(attribute);
-    //    }
     set_wire_frame (wf = false)
         {
-        this.shape.material.wireframe = wf ;   
+        // This will need to be rewritten once we use separate meshes for solid and wireframe.
+        this.wf_view = wf
+
+        this.solid_mesh.visible = this._is_visible && ! this.wf_view
+        this.wf_mesh.visible = this._is_visible && this.wf_view
         }
 
-    set_visibility (visible)
+    set_visibility (visible = true)
         {
-        this.is_visible = visible
-        this.shape.visible = this.is_visible && this._enabled
-        }
+        this._is_visible = visible
 
-    enable_grid ()
-        {
-        // Don't actually enable the grid here, just set the reactivate flag,
-        // Re-enabling it outside of the update method risk showing the user an
-        // incorrectly transformed grid for a brief moment.
-        this._reactivate_grid = true
-        }
-
-    disable_grid ()
-        {
-        this._enabled = false 
-        this.shape.visible = false
-        this._reactivate_grid = false // Probably not necessary, but just to be safe.
+        this.solid_mesh.visible = this._is_visible && ! this.wf_view
+        this.wf_mesh.visible = this._is_visible && this.wf_view
         }
 
     get visible ()
         {
-        return this.is_visible ;
+        return this._is_visible 
         }
 
-    get enabled ()
-        {
-        return this._enabled  
-        }
     }
 
 /*
@@ -570,10 +591,17 @@ export class MHDPause extends MHD
     //static SIZEX = 128 ;
     //static SIZEY = 128 ;
 
-    constructor (scene=null, name="MHDpause", mode = SDWP_Modes.MODEL)
+    constructor (scene=null, name="MHDpause", mode = SDWP_Modes.MODEL, sx, sy)
         {
-        // super (scene, name, 128, 128) ;
-        super (scene, name, 32, 32) ;
+        if  (sx !== undefined && sy !== undefined)
+            {
+            super (scene, name, sx, sy) 
+            }
+
+        else
+            {
+            super (scene, name) 
+            }
 
         this.set_parameters (mode, 2.0, 0., 360., "rgb(62, 16, 112)" ) ;
         }
@@ -588,32 +616,6 @@ export class MHDPause extends MHD
         this.set_parameters (swp, 0., 360., color, emissive) ;
         }        
 
-    // Not sure what this function is supposed to do.
-    // setSunLight(boolean sunlight) 
-    //setSunLight (sunlight) 
-    //    {
-    //    shape.getAppearance().setMaterial(sunlight ? mat : null);
-    //    }
-
-    // @Override
-    // buildModel(float psw, float sina, float start, float end) 
-    /* Work on this later
-    buildModel(psw, sina, start, end) 
-        {
-        let tetra = new QuadArray(4 * (SIZEX - 1) * (SIZEY - 1),
-                QuadArray.COORDINATES
-                | QuadArray.NORMALS
-                | QuadArray.BY_REFERENCE
-                | QuadArray.COLOR_4);
-
-        //tetra.setCapability(GeometryArray.ALLOW_REF_DATA_READ);
-        //tetra.setCapability(GeometryArray.ALLOW_REF_DATA_WRITE);
-        //tetra.setCapability(GeometryArray.ALLOW_COUNT_READ);
-        shape.setGeometry(tetra);
-        setCoordinate(psw, start, end);
-        // doRotation();
-        }
-    */
     //public float frmp(float rho, float x) 
     frmp(rho, x) 
         {
@@ -700,13 +702,6 @@ export class MHDPause extends MHD
                 this.points.push (x, y, z)
                 }
             }
-        }
-
-    doInitialTransform() 
-        {
-        // Use the default world space for doing this rotation.  Y axis (WS) == Z axis (GSE)
-        this.shape.rotateY ((Math.PI / 180) * (-4.)) ;
-
         }
 
     //distanceToMagnetopause(float gse[]) 
@@ -841,10 +836,17 @@ export class MHDPause extends MHD
 
 export class MHDBowshock extends MHD 
     {
-    constructor (scene=null, name="MHDBowshock", mode = SDWP_Modes.MODEL)
+    constructor (scene=null, name="MHDBowshock", mode = SDWP_Modes.MODEL, sx, sy)
         {
-        // super (scene, name, 128, 128) ;
-        super (scene, name, 32, 32) ;
+        if  (sx !== undefined && sy !== undefined)
+            {
+            super (scene, name, sx, sy) 
+            }
+
+        else
+            {
+            super (scene, name) 
+            }
 
         this.A = 0.0296;
         this.B = -0.0381;
@@ -865,13 +867,6 @@ export class MHDBowshock extends MHD
 
         this.set_parameters (swp, 0., 360., color, emissive) ;
         }  
-
-    // I don't think this is every used.
-    doInitialTransform() 
-        {
-        this.shape.rotateY ((Math.PI / 180) * (-4.82)) ;
-        this.shape.position.fromArray (GSE_to_WS (0, .3131, 0)) ;
-        }
 
     getXmax ()
         {
@@ -992,11 +987,4 @@ export class MHDBowshock extends MHD
                 }
             }
         }
-/*
-    set_visibility (visible)
-        {
-        super.set_visibility (visible) ;
-        }
-
-*/
     }

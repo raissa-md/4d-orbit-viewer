@@ -7,6 +7,7 @@ export class Orbit_Data_Store
     {
     static DEFAULT_MAX_POINTS = 4000 
     static DEFAULT_MAX_FACTOR = 4
+    static exist = false
 
     constructor() 
         {
@@ -19,6 +20,7 @@ export class Orbit_Data_Store
          * the corresponding time.
          */
         this.registry = new Map ()
+        Orbit_Data_Store.exist = true
         }
 
     create_empty_data_obj (format=DATA_Format.COORD)

@@ -382,13 +382,13 @@ class display_space
         // Add the heliopause and bowshock meshes
         this._mhd = new MHDPause (this.scene) 
         this._mhd.set_opacity (.24)
-        //  this._mhd.set_wire_frame (true)
+        this._mhd.set_wire_frame (true)
         this._bowshock = new MHDBowshock (this.scene)
         this._bowshock.set_opacity (.23)
-        // this._bowshock.set_wire_frame (true)
+        this._bowshock.set_wire_frame (true)
 
-        this._mhd_visible = this._mhd.visible
-        this._bowshock_visible = this._bowshock.visible
+        this._mhd_visible = (this._mhd) ? this._mhd.visible : false
+        this._bowshock_visible = (this._bowshock) ? this._bowshock.visible : false
         
         this._labels_visible_all = true
         this._labels_visible_sc = true
@@ -1037,8 +1037,8 @@ class display_space
             this.entity_manager.update_sc_pos_list ()
 
             // Update the bowshock and magnetopause objects
-            this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-            this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+            if (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
+            if (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
             }
         }
 
@@ -1058,8 +1058,8 @@ class display_space
         this.update_camera_to_follow ()
 
         // Update the bowshock and magnetopause objects
-        this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-        this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+        if (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
+        if (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
 
         // Update the Spacecraft Position List
         // this.props.update_sc_pos_list ()
@@ -1310,8 +1310,8 @@ class display_space
             this._xz_grid.set_grid_visible (false)
             this._yz_grid.set_grid_visible (false)
             this._xy_grid.set_grid_visible (false)
-            this._mhd.set_visibility (false)
-            this._bowshock.set_visibility (false)
+            if (this._mhd) this._mhd.set_visibility (false)
+            if (this._bowshock) this._bowshock.set_visibility (false)
 
             this._axes.set_axes_invisible ()
             this._axes.update_axes ()
@@ -1327,8 +1327,8 @@ class display_space
             this._xz_grid.set_grid_visible (this._xz_grid_visible)
             this._yz_grid.set_grid_visible (this._yz_grid_visible)
             this._xy_grid.set_grid_visible (this._xy_grid_visible)
-            this._mhd.set_visibility (this._mhd_visible)
-            this._bowshock.set_visibility (this._bowshock_visible)
+            if (this._mhd) this._mhd.set_visibility (this._mhd_visible)
+            if (this._bowshock) this._bowshock.set_visibility (this._bowshock_visible)
 
             this._axes.set_axes_visible ()
             this._axes.update_axes ()
@@ -1354,15 +1354,16 @@ class display_space
     
     disable_field_boundaries (disable = true)
         {     
+        // may want to haven an enable/disable flag at some point 
         if  (disable)
             {                                                                 
-            this._mhd.disable_grid ()
-            this._bowshock.disable_grid ()
+            if (this._mhd) this._mhd.set_visibility (false)
+            if (this._bowshock) this._bowshock.set_visibility (false)
             }
         else
             {
-            this._mhd.enable_grid ()
-            this._bowshock.enable_grid ()
+            if (this._mhd) this._mhd.set_visibility (true)
+            if (this._bowshock) this._bowshock.set_visibility (true)
             }
         }
 
@@ -1376,8 +1377,8 @@ class display_space
         this.update_grids ()
 
         // Update the bowshock and magnetopause objects
-        this._mhd.update (this.entity_manager.start_time, this.entity_manager.coord_system)
-        this._bowshock.update (this.entity_manager.start_time, this.entity_manager.coord_system)
+        if (this._mhd) this._mhd.update (this.entity_manager.start_time, this.entity_manager.coord_system)
+        if (this._bowshock) this._bowshock.update (this.entity_manager.start_time, this.entity_manager.coord_system)
     
         return this.entity_manager.update (...args)
         }
@@ -1513,8 +1514,8 @@ class display_space
         this.update_grids ()
 
         // Update the bowshock and magnetopause objects
-        this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-        this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+        if (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
+        if (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
         }
 
     get_orbit_coord (...args)
@@ -1590,14 +1591,14 @@ class display_space
 
     set_magnetopause_visible (visible)
         {
-        this._mhd.set_visibility (visible)
-        this._mhd_visible = this._mhd.visible
+        if (this._mhd) this._mhd.set_visibility (visible)
+        this._mhd_visible = (this._mhd) ? this._mhd.visible : false
         }
 
     set_bowshock_visible (visible)
         {
-        this._bowshock.set_visibility (visible)  // Do I really need this flag?
-        this._bowshock_visible = this._bowshock.visible
+        if (this._bowshock) this._bowshock.set_visibility (visible)  // Do I really need this flag?
+        this._bowshock_visible = (this._bowshock) ? this._bowshock.visible : false
         }
 
     toggle_xz_grid_visible ()
