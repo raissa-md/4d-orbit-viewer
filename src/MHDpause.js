@@ -34,7 +34,8 @@
 //import { TagsOutlined } from "@ant-design/icons";
 import * as THREE from "three";
 import { COORD_System }  from "./Orbit"
-import { GSE_to_WS } from "./Orbit"
+import { REF_FRAME } from "./Orbit"
+import { coord_system_to_frame } from "./Orbit"
 import { Frame_to_DS } from "./Orbit"
 import { GSE_to_ANY } from "./Orbit"
 import { Orbit_Data } from './App.jsx'
@@ -74,6 +75,7 @@ class MHD
     constructor (scene=null, name="unnamed", sx=64, sy=64)
         {
         this._is_visible = false 
+        this._is_disabled = false
         this.wf_view = false
 
         this.scene = scene ; 
@@ -117,7 +119,7 @@ class MHD
         this.end = 360.0 
 
         document.addEventListener ("coord_change_evt", e => {
-            this.update (e.detail.time, e.detail.system)
+            this.update (e.detail.time, e.detail.system, true)
             })
 
         //protected static ModifiedJulianCalendar mjc = null;
@@ -321,14 +323,6 @@ class MHD
             {
             for (let j = 0 ; j < (this.SIZEY - 1); j++) 
                 {
-                /*
-                for (let row = 0; row < ROWS; row++) 
-                    for (let col = 0; col < COLS; col++) 
-                        const a = row * (COLS + 1) + col;
-                        const b = a + 1;
-                        const c = a + (COLS + 1);
-                        const d = c + 1;
-                */                    
                 // Convert 2D (row, col) to flat 1D index. Each row contains (COLS+1) vertices
                 // This will need to be adjusted for the current loop bounds and indexing scheme.
                 const flat_index = i * (this.SIZEX) + j
@@ -397,10 +391,16 @@ class MHD
     // Note that set_coordinate recreates the this.points array.
     update (time, system = COORD_System.GSE, force_update = false)
         {
-        if  (! (this._is_visible || force_update))
-            {
-            return 
-            }
+        // Might have to rejigger this a bit.  Not sure when a updated should be forceable.  
+        // Don't update if we are in non-geocentric coordinate frame
+        if  (coord_system_to_frame (system) !== REF_FRAME.EARTH) return
+
+        // If the object is disabled, do not update it.
+        if  (this._is_disabled) return
+
+        // Don't update the geometry if the object is not visible unless force_update is true.
+        if  (! (this._is_visible || force_update)) return 
+            
 
         if  (this.swpmode === SDWP_Modes.MODEL )
             {
@@ -512,8 +512,20 @@ class MHD
         {
         this._is_visible = visible
 
-        this.solid_mesh.visible = this._is_visible && ! this.wf_view
-        this.wf_mesh.visible = this._is_visible && this.wf_view
+        this.solid_mesh.visible = this._is_visible && ! this.wf_view && ! this._is_disabled
+        this.wf_mesh.visible = this._is_visible && this.wf_view && ! this._is_disabled
+        }
+
+    disable (disabled = true)
+        {
+        this._is_disabled = disabled
+
+        this.set_visibility (this._is_visible)
+        }
+
+    get disabled ()
+        {
+        return this._is_disabled 
         }
 
     get visible ()

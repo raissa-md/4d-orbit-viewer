@@ -596,25 +596,6 @@ class display_space
         // this.position_camera (pos, camera_dist, direction) // done by set_camera_pos
         }
 
-    /*
-    moved to myOrbitControls
-    set_zoom (distance, focus_dist)
-        {
-        // Set the zoom factor for both the orthogonal camera and the perspective camera.
-        // The perspective camera will always have a zoom factor of 1
-        if  (this._camera.isOrthographicCamera === true)
-            {      
-            this._camera.zoom = focus_dist / distance
-            }
-        else
-            {
-            this._camera.zoom = 1.
-            }
-
-        this._camera.updateProjectionMatrix ()
-        }
-    */
-
     switch_camera ()
         {
         // Same important information from the current controls object
@@ -655,32 +636,6 @@ class display_space
         this._controls.set_target (target)    
         this._controls.set_camera_pos (direction, distance)          
         }
-
-    /* Not used
-    set_camera_position (target, dist_to_target, direction)
-        {
-        if  (this._camera.isPerspectiveCamera)
-            {
-            this._camera.position.addVectors (target, direction.multiplyScalar (dist_to_target))
-            }
-        else
-            {
-
-            this._camera.position.addVectors (target, direction.multiplyScalar (ortho_camera_distance (dist_to_target)))
-            this._camera.zoom = ortho_camera_distance (dist_to_target) / dist_to_target
-            //this._camera.position.addVectors (target, direction.multiplyScalar (ORTHO_TARGET_DIST))
-            //this._camera.zoom = ORTHO_TARGET_DIST / dist_to_target
-            this._camera.updateProjectionMatrix ()
-            }
-
-        console.log ("updating view distance: ", dist_to_target, " zoom ", this._camera.zoom, " ortho ", ortho_camera_distance (dist_to_target))
-
-
-        this._controls.update_view_distance (dist_to_target)
-
-        this._camera.lookAt (target) ;
-        }
-    */
 
     // Tasks for switching reference frames (and where they are done)
     // frame is the center of a fixed coordinate system. 
@@ -834,15 +789,17 @@ class display_space
 
     update_grids ()
         {
-        //const time = this.entity_manager.time
-        //const system = this.entity_manager.coord_system
-        //const frame = this.entity_manager.reference_frame
-
         this._xz_grid.update_grid (null, this.entity_manager.coord_system)
 
         this._yz_grid.update_grid (null, this.entity_manager.coord_system)
 
         this._xy_grid.update_grid (null, this.entity_manager.coord_system)
+        }
+
+    update_fields ()
+        {
+        if (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
+        if (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
         }
 
     time_from_slider_position (pos)
@@ -1037,8 +994,7 @@ class display_space
             this.entity_manager.update_sc_pos_list ()
 
             // Update the bowshock and magnetopause objects
-            if (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-            if (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+            this.update_fields ()
             }
         }
 
@@ -1058,8 +1014,7 @@ class display_space
         this.update_camera_to_follow ()
 
         // Update the bowshock and magnetopause objects
-        if (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-        if (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+        this.update_fields ()
 
         // Update the Spacecraft Position List
         // this.props.update_sc_pos_list ()
@@ -1333,12 +1288,8 @@ class display_space
             this._axes.set_axes_visible ()
             this._axes.update_axes ()
 
-            // alert ("all: " + this._labels_visible_all + " sc: " + this._labels_visible_sc + " planet: " + this._labels_visible_planet)
-
             if  (! this._labels_visible_sc || ! this._labels_visible_planet)
                 {
-                // alert ("all: " + this._labels_visible_all + " sc: " + this._labels_visible_sc + " planet: " + this._labels_visible_planet)
-
                 this.entity_manager.set_planet_label_visible (this._labels_visible_planet)
                 this.entity_manager.set_sc_label_visible (this._labels_visible_sc)
                 }
@@ -1357,13 +1308,13 @@ class display_space
         // may want to haven an enable/disable flag at some point 
         if  (disable)
             {                                                                 
-            if (this._mhd) this._mhd.set_visibility (false)
-            if (this._bowshock) this._bowshock.set_visibility (false)
+            if (this._mhd) this._mhd.disable (true)
+            if (this._bowshock) this._bowshock.disable (true)
             }
         else
             {
-            if (this._mhd) this._mhd.set_visibility (true)
-            if (this._bowshock) this._bowshock.set_visibility (true)
+            if (this._mhd) this._mhd.disable (false)
+            if (this._bowshock) this._bowshock.disable (false)
             }
         }
 
@@ -1377,9 +1328,8 @@ class display_space
         this.update_grids ()
 
         // Update the bowshock and magnetopause objects
-        if (this._mhd) this._mhd.update (this.entity_manager.start_time, this.entity_manager.coord_system)
-        if (this._bowshock) this._bowshock.update (this.entity_manager.start_time, this.entity_manager.coord_system)
-    
+        this.update_fields ()
+
         return this.entity_manager.update (...args)
         }
 
@@ -1402,56 +1352,6 @@ class display_space
         // field boundary objects.
 
         this.entity_manager.set_coord_system (system)
-        
-        /*
-
-        // Check if the default coordinate system changed.  
-        // This is bad because it relies on each class of coordinate systems having
-        // a unique default unit.  We should probably have a more explicit way 
-        // to check this.
-        // I doubt this will work for anything other than the Earth and the Sun.
-        // The point here is to automatically switch to the central object of the selected coordinate 
-        // system.  For instance, switching to the Sun when a Heliocentric coordinate system
-        // is selected.
-        if (get_default_unit (system) !== get_default_unit (current))
-            {
-            const unit = get_default_unit (system)
-
-            this.set_unit (unit)
-
-            switch (unit)
-                {
-                case COORD_Unit.RE :
-
-                    this.update_frame ("EARTH")
-                    break
-
-                case COORD_Unit.RS :
-
-                    this.update_frame ("SUN")
-                    break
-
-                case COORD_Unit.KM :
-
-                    this.update_frame ("MOON")
-                    break
-
-                default:
-                }
-            }
-        */
-        
-
-        // this.update_frame (coord_system_to_frame (this.entity_manager.coord_system))
-
-        // *** this._earth.update_axes (this.entity_manager.time, 
-        //    this.entity_manager.coord_system,
-        //    this.entity_manager.reference_frame)
-        // this.update_grids ()
-
-        // Update the bowshock and magnetopause objects
-        // this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-        // this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
         }
 
     /* No longer used
@@ -1514,8 +1414,7 @@ class display_space
         this.update_grids ()
 
         // Update the bowshock and magnetopause objects
-        if (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-        if (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+        this.update_fields ()
         }
 
     get_orbit_coord (...args)
