@@ -29,6 +29,3 @@
 - **Function Return Values:** Functions should generally return null on error.
 - **Exceptions:** Avoid throwing exceptions for control flow; use return values to indicate failure instead.
 
-## Testing Expectations
-- **Test File Creation:** Every time you create a new logic file, you must create a corresponding `.test.js` file in the same directory.
-- **Edge Case Coverage:** Ensure test coverage handles edge cases (e.g., empty arrays, null values, timeout errors).
