@@ -50,8 +50,19 @@ const sdwp_modes =
     MODEL: 2,       // The solar wind pressure is calculated based on the magnetopause position 
                     // returned by the CCMC HAPI server.  This is the default mode. 
     }
-
 export const SDWP_Modes = Object.freeze (sdwp_modes)
+
+const mhd_events = 
+    {
+    UNKNOWN: 0,
+    VISIBLE_CHANGE: 1,
+    WF_VIEW_CHANGE: 2,
+    SWP_MODE_CHANGE: 3,
+    ENABLED: 4,
+    DISABLED: 5,
+    } 
+
+export const MHD_Events = Object.freeze (mhd_events)
 
 // This probably should live someplace else.
 export const MP_STANDOFF_DATASET = 'SWMF2023_RT_STANDOFF_P1M' // Not used right now.
@@ -76,10 +87,10 @@ class MHD
         {
         this._is_visible = false 
         this._is_disabled = false
-        this.wf_view = false
+        this._wf_view = false
 
         this.scene = scene ; 
-        this.name = name ;
+        this._name = name ;
         this.solid_material = new THREE.MeshPhongMaterial() 
         this.solid_material.vertexColors = true 
         this.solid_material.transparent = true
@@ -87,9 +98,9 @@ class MHD
         this.solid_material.side = THREE.DoubleSide
 
         this.solid_mesh = new THREE.Mesh () 
-        this.solid_mesh.visible = this._is_visible && ! this.wf_view
+        this.solid_mesh.visible = this._is_visible && ! this._wf_view
         this.solid_mesh.material = this.solid_material
-        this.solid_mesh.name = this.name + "_solid"
+        this.solid_mesh.name = this._name + "_solid"
 
         this.wf_material = new THREE.LineBasicMaterial () 
         this.wf_material.transparent = true
@@ -97,13 +108,13 @@ class MHD
 
         this.wf_mesh = new THREE.LineSegments ()
         this.wf_mesh.material = this.wf_material
-        this.wf_mesh.visible = this._is_visible && this.wf_view
-        this.wf_mesh.name = this.name + "_wf"
+        this.wf_mesh.visible = this._is_visible && this._wf_view
+        this.wf_mesh.name = this._name + "_wf"
 
         this.color = new THREE.Color ("white") 
-        this.swpmode = SDWP_Modes.MODEL
+        this._swpmode = SDWP_Modes.MODEL
         this.mpstandoff = null
-        this.swp = 2.04 ;
+        this._swp = 2.04 ;
         this.xmin = -45.0 ;
         this.mesh_indices = [] 
         this.wf_indices = [] 
@@ -164,8 +175,8 @@ class MHD
             this.solid_material.specular.set (sp_val) 
             }
             
-        this.swpmode = mode
-        this.swp = swp ;
+        this._swpmode = mode
+        this._swp = swp ;
         this.start = start ;
         this.end = end ;
 
@@ -237,12 +248,12 @@ class MHD
             return
             }  
 
-        if  (! this.scene.getObjectByName (this.name + "_solid"))
+        if  (! this.scene.getObjectByName (this._name + "_solid"))
             {
             this.scene.add (this.solid_mesh) 
             }
 
-        if  (! this.scene.getObjectByName (this.name + "_wf"))
+        if  (! this.scene.getObjectByName (this._name + "_wf"))
             {
             this.scene.add (this.wf_mesh) 
             }
@@ -255,12 +266,12 @@ class MHD
             return
             }  
 
-        if  (this.scene.getObjectByName (this.name + "_solid"))
+        if  (this.scene.getObjectByName (this._name + "_solid"))
             {
             this.scene.remove (this.solid_mesh) 
             }
 
-        if  (this.scene.getObjectByName (this.name + "_wf"))
+        if  (this.scene.getObjectByName (this._name + "_wf"))
             {
             this.scene.remove (this.wf_mesh) 
             }
@@ -268,8 +279,8 @@ class MHD
 
     is_in_scene ()
         {
-        const solid_exists = this.scene.getObjectByName (this.name + "_solid")
-        const wf_exists = this.scene.getObjectByName (this.name + "_wf")
+        const solid_exists = this.scene.getObjectByName (this._name + "_solid")
+        const wf_exists = this.scene.getObjectByName (this._name + "_wf")
 
         return (solid_exists && wf_exists) 
         }
@@ -278,7 +289,7 @@ class MHD
     setMin (newMin) 
         {
         this.xmin = newMin;
-        this.buildModel (this.swp, 0.2, 0.0, 360.0);
+        this.buildModel (this._swp, 0.2, 0.0, 360.0);
         }
 
     //setScale (float newScale) 
@@ -300,7 +311,7 @@ class MHD
         this.mesh_indices.length = 0 
     
         this.create_index_array () 
-        this.set_coordinate (this.swp, this.start, this.end)
+        this.set_coordinate (this._swp, this.start, this.end)
         this.update_geometry () 
 
         if  (! this.is_in_scene ())
@@ -402,7 +413,7 @@ class MHD
         if  (! (this._is_visible || force_update)) return 
             
 
-        if  (this.swpmode === SDWP_Modes.MODEL )
+        if  (this._swpmode === SDWP_Modes.MODEL )
             {
             // Get the standoff distance value at the current time.  If it has not 
             // changed significantly, then there is no need to update the geometry.
@@ -410,7 +421,7 @@ class MHD
                 {
                 // Adjust the geometry to reflect the new standoff distance value.  
                 // This will involve recalculating the coordinates of the vertices
-                this.set_coordinate (this.swp, this.start, this.end)
+                this.set_coordinate (this._swp, this.start, this.end)
                 }
             }
 
@@ -490,7 +501,7 @@ class MHD
     //setSWP(float newSwp) 
     setSWP(newSwp) 
         {
-        this.swp = newSwp
+        this._swp = newSwp
 
         // This should just call update_geometry, not buildModel, since that is the only
         // thing that needs to be updated when the swp changes.  
@@ -501,19 +512,43 @@ class MHD
 
     set_wire_frame (wf = false)
         {
-        // This will need to be rewritten once we use separate meshes for solid and wireframe.
-        this.wf_view = wf
+        this._wf_view = wf
 
-        this.solid_mesh.visible = this._is_visible && ! this.wf_view
-        this.wf_mesh.visible = this._is_visible && this.wf_view
+        this.solid_mesh.visible = this._is_visible && ! this._wf_view
+        this.wf_mesh.visible = this._is_visible && this._wf_view
+
+        const event = new CustomEvent ("field_display_evt",
+                        {
+                        bubbles: true,
+                        detail: {
+                            name: this._name,
+                            event: MHD_Events.WF_VIEW_CHANGE,
+                            wf: this._wf_view
+                            }
+                        })
+
+        document.dispatchEvent (event)
+        
         }
 
     set_visibility (visible = true)
         {
         this._is_visible = visible
 
-        this.solid_mesh.visible = this._is_visible && ! this.wf_view && ! this._is_disabled
-        this.wf_mesh.visible = this._is_visible && this.wf_view && ! this._is_disabled
+        this.solid_mesh.visible = this._is_visible && ! this._wf_view && ! this._is_disabled
+        this.wf_mesh.visible = this._is_visible && this._wf_view && ! this._is_disabled
+
+        const event = new CustomEvent ("field_display_evt",
+                        {
+                        bubbles: true,
+                        detail: {
+                            name: this._name,
+                            event: MHD_Events.VISIBLE_CHANGE,
+                            visible: this._is_visible
+                            }
+                        })
+
+        document.dispatchEvent (event)
         }
 
     disable (disabled = true)
@@ -521,6 +556,35 @@ class MHD
         this._is_disabled = disabled
 
         this.set_visibility (this._is_visible)
+
+        // Dispatch an event indicating the disabled/enabled state change.
+        if  (this._is_disabled)
+            {
+            const event = new CustomEvent ("field_display_evt",
+                            {
+                            bubbles: true,
+                            detail: {
+                                name: this._name,
+                                event: MHD_Events.DISABLED,
+                                }
+                            })
+
+            document.dispatchEvent (event)
+            }
+
+        else
+            {
+            const event = new CustomEvent ("field_display_evt",
+                            {
+                            bubbles: true,
+                            detail: {
+                                name: this._name,
+                                event: MHD_Events.ENABLED,
+                                }
+                            })
+
+            document.dispatchEvent (event)
+            }
         }
 
     get disabled ()
@@ -531,6 +595,26 @@ class MHD
     get visible ()
         {
         return this._is_visible 
+        }
+
+    get swp ()
+        {
+        return this._swp
+        }
+
+    get swpmode ()
+        {
+        return this._swpmode
+        }
+
+    get wf_view ()
+        {
+        return this._wf_view
+        }
+
+    get name ()
+        {
+        return this._name
         }
 
     }
@@ -667,7 +751,7 @@ export class MHDPause extends MHD
         let rho
         let xmax
 
-        if  (this.swpmode === SDWP_Modes.MODEL && this.mpstandoff !== null)
+        if  (this._swpmode === SDWP_Modes.MODEL && this.mpstandoff !== null)
             {
             rho  = this.mpstandoff / 11.0028195
             xmax = this.mpstandoff
@@ -720,7 +804,7 @@ export class MHDPause extends MHD
     distanceToMagnetopause (gse) 
         {
         let S1 = 0.14;
-        let rho = Math.pow((2.04 / this.swp), (1. / 6.6));
+        let rho = Math.pow((2.04 / this._swp), (1. / 6.6));
         let S2 = 18.2 * rho;
         let S3 = -217.2 * rho * rho;
 
@@ -927,7 +1011,7 @@ export class MHDBowshock extends MHD
         let rho
         let xmax
 
-        if  (this.swpmode === SDWP_Modes.MODEL && this.mpstandoff !== null)
+        if  (this._swpmode === SDWP_Modes.MODEL && this.mpstandoff !== null)
             {
             // Derive bowshock rho from the SWMF magnetopause standoff distance.
             //

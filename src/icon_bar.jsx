@@ -204,7 +204,7 @@ class Icon_Bar extends React.Component
     setup_video_rec ()
         {
         this.setState ({
-            btn_icon: record_rdy_icon, // Replace with record icon when available
+            btn_icon: record_rdy_icon, 
             screenshot: false,
             media_tooltip: MEDIA_TOOLTIP_STR [1]
             })                 

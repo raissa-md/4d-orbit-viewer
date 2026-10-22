@@ -380,10 +380,10 @@ class display_space
         this._axes.update_axes ()
 
         // Add the heliopause and bowshock meshes
-        this._mhd = new MHDPause (this.scene) 
+        this._mhd = new MHDPause (this.scene, 'magnetopause') 
         this._mhd.set_opacity (.24)
         this._mhd.set_wire_frame (true)
-        this._bowshock = new MHDBowshock (this.scene)
+        this._bowshock = new MHDBowshock (this.scene, 'bowshock') 
         this._bowshock.set_opacity (.23)
         this._bowshock.set_wire_frame (true)
 
@@ -1138,6 +1138,26 @@ class display_space
         return this._axes.axes_length
         }
 
+    get mag_name ()
+        {
+        return this._mhd.name
+        }
+
+    get bs_name ()
+        {
+        return this._bowshock.name
+        }
+
+    get mag_wf_view ()
+        {
+        return this._mhd.wf_view
+        }
+        
+    get bs_wf_view ()
+        {
+        return this._bowshock.wf_view
+        }
+
     get text_color ()
         {
         return this.entity_manager.text_color 
@@ -1498,6 +1518,16 @@ class display_space
         {
         if (this._bowshock) this._bowshock.set_visibility (visible)  // Do I really need this flag?
         this._bowshock_visible = (this._bowshock) ? this._bowshock.visible : false
+        }
+
+    set_magnetopause_wf (wf = true)
+        {
+        if (this._mhd) this._mhd.set_wire_frame (wf)
+        }
+
+    set_bowshock_wf (wf = true)
+        {
+        if (this._bowshock) this._bowshock.set_wire_frame (wf)
         }
 
     toggle_xz_grid_visible ()

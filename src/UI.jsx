@@ -849,6 +849,8 @@ export class V_Dropdown extends React.Component
             trigger = "click", // "click" | "hover" | "contextmenu"
             anchor,     // function ({ open }) => ReactNode
             dropdown,          // menu content
+            orientation = "column",
+            reverse = false,
             align = "bottom",    // "top" | "top-right" | "right" | etc. 
             width = "auto",
             background = "#1e1f22",
@@ -862,6 +864,17 @@ export class V_Dropdown extends React.Component
             } = this.props ;
 
         const { open, context_pos } = this.state
+
+        const valid_orientation = orientation === "column" || orientation === "row"
+
+        if  (! valid_orientation)
+            {
+            console.error (`V_Dropdown received unsupported orientation "${orientation}". Expected "column" or "row".`)
+            }
+
+        const menu_flex_direction = valid_orientation
+            ? `${orientation}${reverse ? "-reverse" : ""}`
+            : "column"
 
         // Decide which handlers apply
         let anchor_props = {}
@@ -886,6 +899,7 @@ export class V_Dropdown extends React.Component
         // - click/hover: positioned relative to wrapper
         // - contextmenu: positioned fixed at cursor
         let dropdown_style = {
+            flexDirection: menu_flex_direction,
             width: width,
             background: background,
             border: border,

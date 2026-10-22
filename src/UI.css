@@ -271,7 +271,6 @@
 
 .VUI-dropdown-menu {
   display: flex;
-  flex-direction: column;
   justify-content: flex-start;
   align-items: center;
   border-radius: 4px;
