@@ -1,18 +1,19 @@
 # dependencies
-/node_modules
-/.pnp
+node_modules
+.pnp
 .pnp.js
 
 # testing
-/coverage
+coverage
 
 # production
-/dist
-/build
+dist
+dist-mcp
+build
 
 # vite / dev server stuff
-/.vite
-/vite.config.*.timestamp-*
+.vite
+vite.config.*.timestamp-*
 
 # logs
 *.log
@@ -53,4 +54,3 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
-
