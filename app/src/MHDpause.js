@@ -153,28 +153,10 @@ class MHD
     // set_parameters (float psw, float sina, float start, float end, Color4f cl) 
     set_parameters (mode = SDWP_Modes.MODEL, swp=2.04, start=0.0, end=360.0, diff_val="white", em_val, sp_val) 
         {
-        this.color.set  (diff_val) 
+        const geometry_exists = (this.mesh != null) ? true : false
 
-        if  (em_val === undefined)
-            {
-            const emissive = this.calc_emissive_color (this.color, 1.2)
-            this.solid_material.emissive.copy (emissive)
-            }
-        else 
-            {
-            this.solid_material.emissive.set (em_val) 
-            }
-
-        if  (sp_val === undefined)
-            {
-            this.solid_material.specular.copy (this.color) 
-            this.solid_material.specular.lerp (new THREE.Color (0xffffff), 0.15) 
-            }
-        else 
-            {
-            this.solid_material.specular.set (sp_val) 
-            }
-            
+        this.set_object_color (diff_val, em_val, sp_val)
+         
         this._swpmode = mode
         this._swp = swp ;
         this.start = start ;
@@ -187,7 +169,14 @@ class MHD
         this.wf_material.color.copy (this.color) 
         this.solid_material.shininess = 0.1 
 
-        this.buildModel ()
+        if  (! geometry_exists)
+            {
+            this.buildModel ()
+            }
+        else
+            {
+            this.update_color_attribute ()
+            }
 
         // addChild(shape);
         }
@@ -376,6 +365,20 @@ class MHD
         return color
         }
 
+    update_color_attribute ()
+        {
+        const color_attribute = this.solid_mesh.geometry.getAttribute ('color')
+
+        if  (color_attribute === undefined) return
+
+        for  (let i = 0; i < color_attribute.count; i++)
+            {
+            color_attribute.setXYZ (i, this.color.r, this.color.g, this.color.b)
+            }
+
+        color_attribute.needsUpdate = true
+        }
+
     // This should probably be renamed to create_geometry. It is only called from buildModel.
     update_geometry ()
         {
@@ -456,10 +459,11 @@ class MHD
         return emissive
         }
 
-    /*respond to a change in color on the surface window */
-    //setColor(Color4f c) 
-    set_color (diffuse, emissive, spec)
+    set_object_color (diffuse, emissive, spec)
         {
+        // Update the object color based on the provided diffuse, emissive, and specular values.
+
+        // If the diffuse color is not provided, retain the current color.
         if  (diffuse !== undefined)
             {
             this.color.set (diffuse) 
@@ -467,17 +471,39 @@ class MHD
             this.wf_material.color.copy (this.color) 
             }
 
-        if  (emissive !== undefined)
+        // If the emissive color is not provided, calculate it based on the diffuse color.
+        // Otherwise, use the provided emissive color.
+        if  (emissive === undefined)
+            {
+            const emissive_val = this.calc_emissive_color (this.color, 1.2)
+            this.solid_material.emissive.copy (emissive_val)
+            }
+        else 
             {
             this.solid_material.emissive.set (emissive) 
             }
 
-        if  (spec !== undefined)
+        // If the specular color is not provided, calculate it based on the diffuse color.
+        // Otherwise, use the provided specular color.
+        if  (spec === undefined)
             {
-            this.solid_material.specular.set (spec)
+            this.solid_material.specular.copy (this.color) 
+            this.solid_material.specular.lerp (new THREE.Color (0xffffff), 0.15) 
+            }
+        else 
+            {
+            this.solid_material.specular.set (spec) 
             }
 
-        this.buildModel ();
+        }
+
+    /*respond to a change in color on the surface window */
+    //setColor(Color4f c) 
+    set_color (diffuse, emissive, spec)
+        {
+        this.set_object_color (diffuse, emissive, spec)
+
+        this.update_color_attribute ()
         }
 
     /*respond to a change in opacity on the surface window */

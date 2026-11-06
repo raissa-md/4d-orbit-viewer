@@ -797,8 +797,8 @@ class display_space
 
     update_fields ()
         {
-        if (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
-        if (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
+        if  (this._mhd) this._mhd.update (this.entity_manager.time, this.entity_manager.coord_system)
+        if  (this._bowshock) this._bowshock.update (this.entity_manager.time, this.entity_manager.coord_system)
         }
 
     time_from_slider_position (pos)
@@ -923,7 +923,7 @@ class display_space
                 this._slider_value = 1
                 }
 
-            if (pos >= this._slider_width)
+            if  (pos >= this._slider_width)
                 {
                 this._slider_value = this._slider_width
                 }
@@ -1284,8 +1284,8 @@ class display_space
             this._xz_grid.set_grid_visible (false)
             this._yz_grid.set_grid_visible (false)
             this._xy_grid.set_grid_visible (false)
-            if (this._mhd) this._mhd.set_visibility (false)
-            if (this._bowshock) this._bowshock.set_visibility (false)
+            if  (this._mhd) this._mhd.set_visibility (false)
+            if  (this._bowshock) this._bowshock.set_visibility (false)
 
             this._axes.set_axes_invisible ()
             this._axes.update_axes ()
@@ -1301,8 +1301,8 @@ class display_space
             this._xz_grid.set_grid_visible (this._xz_grid_visible)
             this._yz_grid.set_grid_visible (this._yz_grid_visible)
             this._xy_grid.set_grid_visible (this._xy_grid_visible)
-            if (this._mhd) this._mhd.set_visibility (this._mhd_visible)
-            if (this._bowshock) this._bowshock.set_visibility (this._bowshock_visible)
+            if  (this._mhd) this._mhd.set_visibility (this._mhd_visible)
+            if  (this._bowshock) this._bowshock.set_visibility (this._bowshock_visible)
 
             this._axes.set_axes_visible ()
             this._axes.update_axes ()
@@ -1327,13 +1327,13 @@ class display_space
         // may want to haven an enable/disable flag at some point 
         if  (disable)
             {                                                                 
-            if (this._mhd) this._mhd.disable (true)
-            if (this._bowshock) this._bowshock.disable (true)
+            if  (this._mhd) this._mhd.disable (true)
+            if  (this._bowshock) this._bowshock.disable (true)
             }
         else
             {
-            if (this._mhd) this._mhd.disable (false)
-            if (this._bowshock) this._bowshock.disable (false)
+            if  (this._mhd) this._mhd.disable (false)
+            if  (this._bowshock) this._bowshock.disable (false)
             }
         }
 
@@ -1509,24 +1509,44 @@ class display_space
 
     set_magnetopause_visible (visible)
         {
-        if (this._mhd) this._mhd.set_visibility (visible)
+        if  (this._mhd) this._mhd.set_visibility (visible)
         this._mhd_visible = (this._mhd) ? this._mhd.visible : false
         }
 
     set_bowshock_visible (visible)
         {
-        if (this._bowshock) this._bowshock.set_visibility (visible)  // Do I really need this flag?
+        if  (this._bowshock) this._bowshock.set_visibility (visible)  // Do I really need this flag?
         this._bowshock_visible = (this._bowshock) ? this._bowshock.visible : false
         }
 
     set_magnetopause_wf (wf = true)
         {
-        if (this._mhd) this._mhd.set_wire_frame (wf)
+        if  (this._mhd) this._mhd.set_wire_frame (wf)
         }
 
     set_bowshock_wf (wf = true)
         {
-        if (this._bowshock) this._bowshock.set_wire_frame (wf)
+        if  (this._bowshock) this._bowshock.set_wire_frame (wf)
+        }
+
+    set_magnetopause_color (color)
+        {
+        if  (this._mhd) this._mhd.set_color (color)
+        }
+
+    set_bowshock_color (color)
+        {
+        if  (this._bowshock) this._bowshock.set_color (color)
+        }
+
+    set_magnetopause_opacity (opacity)
+        {
+        if  (this._mhd) this._mhd.set_opacity (opacity)
+        }
+
+    set_bowshock_opacity (opacity)
+        {
+        if  (this._bowshock) this._bowshock.set_opacity (opacity)
         }
 
     toggle_xz_grid_visible ()
