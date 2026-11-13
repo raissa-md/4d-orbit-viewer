@@ -69,6 +69,21 @@ export const MP_STANDOFF_DATASET = 'SWMF2023_RT_STANDOFF_P1M' // Not used right 
 export const MP_STANDOFF_ID = 'mp_standoff'
 
 
+function rgb_to_hex (r, g, b) 
+    {
+    // Function to convert individual RGB values to hex
+    const hexed = (value) => {
+        const val = Math.round(Math.min (1, Math.max (0, value)) * 255)
+        const str = val.toString(16)
+        const hex = str.padStart(2, "0")
+
+        return hex
+        }
+
+    // Convert each component to hex and put them together
+    return `#${hexed(r)}${hexed(g)}${hexed(b)}`    
+    }
+
 /**
  * Superclass for MHDSurf and MHDPause, is never instantiated directly
  *
@@ -156,7 +171,7 @@ class MHD
         const geometry_exists = (this.mesh != null) ? true : false
 
         this.set_object_color (diff_val, em_val, sp_val)
-         
+
         this._swpmode = mode
         this._swp = swp ;
         this.start = start ;
@@ -467,6 +482,7 @@ class MHD
         if  (diffuse !== undefined)
             {
             this.color.set (diffuse) 
+
             this.solid_material.color.copy (this.color) 
             this.wf_material.color.copy (this.color) 
             }
@@ -494,7 +510,6 @@ class MHD
             {
             this.solid_material.specular.set (spec) 
             }
-
         }
 
     /*respond to a change in color on the surface window */
@@ -638,11 +653,21 @@ class MHD
         return this._wf_view
         }
 
+    get opacity ()
+        {
+        return this.solid_material.opacity
+        }
+
     get name ()
         {
         return this._name
         }
+    get diffuse_color ()
+        {
+        const r = rgb_to_hex (this.color.r, this.color.g, this.color.b) 
 
+        return r
+        }
     }
 
 /*
