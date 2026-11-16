@@ -36,4 +36,5 @@
 
 ## Misc 
 - **Permission:** Clearly explain the reason for any action requiring permission.
+- **Build:** Do not build the application unless instructed.
 
