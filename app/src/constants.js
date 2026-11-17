@@ -15,6 +15,7 @@ export const MIN_SCREEN_Y = 800
 export const GH_PANEL_X = 400
 export const MIN_SCREEN_X_3PANEL = 1800
 export const MIN_SCREEN_X_WIDEPNL = 720
+export const MIN_SCREEN_X_COMB = 1200
 
 export const ORTHO_CAMERA = 0 
 export const PERSP_CAMERA = 1 

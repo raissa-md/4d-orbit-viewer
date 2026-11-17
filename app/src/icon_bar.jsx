@@ -27,8 +27,9 @@ import SSE_coord_icon from './images/SSE_coord_sys.png'
 import MSO_coord_icon from './images/MSO_coord_sys.png'
 import { coord_system_to_key } from './Orbit.js'
 
+import { MIN_SCREEN_X_COMB } from './constants.js'
 import { TOP_BUTTON_STYLE } from './constants.js'
-import { SPDF_BUTTON_STYLE } from './constants.js'
+//import { SPDF_BUTTON_STYLE } from './constants.js'
 import { TT_BGCOLOR } from './constants.js'
 import { TITLE } from './constants.js'
 import { BUILD } from './constants.js'
@@ -36,6 +37,12 @@ import { V3DSpace } from './App';
 
 const DBL_CLICK_TIME = 350
 const TT_OPEN_DELAY = 100
+
+const use_combined_media = () => {
+    const w = window.innerWidth
+
+    return w < MIN_SCREEN_X_COMB
+    }
 
 const MEDIA_TOOLTIP_STR = [
     `Press to capture a screenshot and save as a PNG image. Right click to activate a
@@ -62,9 +69,12 @@ class Icon_Bar extends React.Component
             menu_open: false,            // True when the context menu is open
             coord_system: coord_system_to_key (V3DSpace.coord_system),
             screen: null,
+            combine_media_btn: use_combined_media (),
             }
 
         this.get_coord_sys_icon = this.get_coord_sys_icon.bind (this)
+        this.capture_screenshot = this.capture_screenshot.bind (this)
+        this.toggle_video_recording = this.toggle_video_recording.bind (this)
         this.click_media = this.click_media.bind (this)
         this.setup_video_rec = this.setup_video_rec.bind (this)
         this.setup_screenshot = this.setup_screenshot.bind (this)
@@ -72,6 +82,7 @@ class Icon_Bar extends React.Component
         this.media_mouse_leave = this.media_mouse_leave.bind (this)
         this.click_outside = this.click_outside.bind (this)
         this.show_context_menu = this.show_context_menu.bind (this)
+        this.componentDidMount = this.componentDidMount.bind(this)
         this.render = this.render.bind (this)
 
         }
@@ -136,6 +147,7 @@ class Icon_Bar extends React.Component
             }
         }
         
+    /* Click media button (old implementation) 
     click_media (e)
         {
         //V3DSpace.set_axis ("X", false)
@@ -189,6 +201,73 @@ class Icon_Bar extends React.Component
         sc.capture_image ()
         
         this.props.open_image_save_menu (sc)
+        }
+    */
+    capture_screenshot ()
+        {
+        const sc = V3DSpace.get_screen ()
+        sc.capture_image ()
+        this.props.open_image_save_menu (sc)
+        }
+
+    toggle_video_recording ()
+        {
+        if  (this.state.record)
+            {
+            this.state.screen.stop_recording ()
+
+            return
+            }
+
+        const sc = V3DSpace.get_screen ()
+        sc.start_recording ()
+            .then (() => 
+                {
+                this.props.open_image_save_menu (sc)
+                this.setState ({
+                        record: false,
+                        btn_icon: record_rdy_icon,
+                        media_tooltip: MEDIA_TOOLTIP_STR [1],
+                        screen: null,
+                        })
+                }); 
+
+        this.setState ({
+            record: true,
+            btn_icon: record_icon,
+            media_tooltip: MEDIA_TOOLTIP_STR [2],
+            screen: sc,
+            })
+        }
+    
+    click_media (e)
+        {
+        // if  (this.props.wide_media_layout || this.props.wide_screen_layout)
+        //    {
+        //        return
+        //    }
+
+        //V3DSpace.set_axis ("X", false)
+        // Activate media record (screenshot or video)
+
+        // Check for alt-click
+        if  (e.altKey)
+            {
+            e.stopPropagation ()
+            this.show_context_menu (e)
+
+            return
+            }
+
+
+        if  (! this.state.screenshot)
+            {
+            this.toggle_video_recording ()
+
+            return
+            }
+
+        this.capture_screenshot ()
         }
 
     setup_screenshot ()
@@ -254,6 +333,10 @@ class Icon_Bar extends React.Component
         document.addEventListener ("coord_change_evt", e => {
             this.setState ({ coord_system: coord_system_to_key (e.detail.system) })
             })
+
+        window.addEventListener ('resize', () => {
+            this.setState ({combine_media_btn: use_combined_media ()})  
+            })
         }
 
     render ()
@@ -297,6 +380,40 @@ class Icon_Bar extends React.Component
                     shade={this.props.invert}
                     />
             </> ;
+
+        const ind_screenshot_button =
+        <V_Tooltip    
+            align="bottom" 
+            background={TT_BGCOLOR}
+            offset="10px"
+            text={`Press to capture a screenshot and save as a PNG image.`}
+            >
+            <V_Button
+                size="standard"
+                onClick={this.capture_screenshot} 
+                style={TOP_BUTTON_STYLE}
+                image={screenshot_icon}
+                alt="take screenshot"
+                shade={this.props.invert}
+                />
+        </V_Tooltip> ;
+
+        const ind_record_button =
+        <V_Tooltip    
+            align="bottom" 
+            background={TT_BGCOLOR}
+            offset="10px"
+            text={this.state.record ? `Press to end video capture.` : `Press to start video capture.`}
+            >
+            <V_Button
+                size="standard"
+                onClick={this.toggle_video_recording} 
+                style={TOP_BUTTON_STYLE}
+                image={this.state.record ? record_icon : record_rdy_icon}
+                alt={this.state.record ? "end video recording" : "start video recording"}
+                shade={this.props.invert}
+                />
+        </V_Tooltip> ;
 
         const help_button =
         <V_Tooltip    
@@ -374,7 +491,7 @@ class Icon_Bar extends React.Component
                 />
         </V_Tooltip> ;
 
-        const ss_button =                    
+        const combined_button =                    
             <V_Button
                 size="standard"
                 onClick={this.click_media} 
@@ -387,7 +504,7 @@ class Icon_Bar extends React.Component
                 shade={this.props.invert}
                 />
 
-        const screenshot_button = 
+        const combined_media_btn = 
         <V_Tooltip    
             align="bottom" 
             background={TT_BGCOLOR}
@@ -407,9 +524,17 @@ class Icon_Bar extends React.Component
                 close_on_select={true}
                 visible={this.state.menu_open}
                 dropdown={media_dropdown}
-                anchor={()=>{return ss_button}}
+                anchor={()=>{return combined_button}}
                 />
         </V_Tooltip> ;
+
+        const individual_media_buttons =
+            <>
+                {ind_screenshot_button}
+                {ind_record_button}
+            </> ;
+
+        const media_button = this.state.combine_media_btn ? combined_media_btn : individual_media_buttons
 
         const options_button = 
         <V_Tooltip    
@@ -492,7 +617,7 @@ class Icon_Bar extends React.Component
                 <div className="icon_left">
                     {menu_button}
                     {download_button}
-                    {screenshot_button}
+                    {media_button}
                     {options_button}
                     {coord_button}
                     {bookmark_button}
