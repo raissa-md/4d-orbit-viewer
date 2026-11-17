@@ -1495,7 +1495,7 @@ class Ghost_Menu extends React.Component
         {
         if  (V3DSpace.end_time < record.start_time || V3DSpace.start_time > record.end_time )
             {
-            const content =  "No orbit data available for curreent time range." 
+            const content =  "No orbit data available for current time range." 
 
             V3DSpace.entity_manager.msg_portal.add_alert (ALERT.custom, content, 7)
 
