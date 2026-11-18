@@ -29,3 +29,12 @@
 - **Function Return Values:** Functions should generally return null on error.
 - **Exceptions:** Avoid throwing exceptions for control flow; use return values to indicate failure instead.
 
+## GitHub Specific
+- **Commits:** Do not commit code. Ever.
+- **PRs:** Do not create pull requests.
+- **Git:** Do not execute git commands without permission.
+
+## Misc 
+- **Permission:** Clearly explain the reason for any action requiring permission.
+- **Build:** Do not build the application unless instructed.
+

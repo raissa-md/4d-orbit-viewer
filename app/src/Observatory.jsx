@@ -841,7 +841,6 @@ class Read_Properties_File extends React.Component
                         cadence: cadence
                         }) ;
                     }
-                
 
                 // update the whatever.
                 this.props.set_properties (s) ;
@@ -854,43 +853,35 @@ class Read_Properties_File extends React.Component
         }
     }
 
-class Options extends React.Component
+class Color_Select extends React.Component
     {
     constructor (props)
         {
-        super (props) ;
-        
+        super (props)
+
         this.state = {
-            display_bg_palette: false, 
+            display: false
             }
 
-        this.marks = {
-            1:  '1',
-            2:  '2',
-            3:  '3',
-            4:  '4',
-            5:  '5',
-            6:  '6',
-            7:  '7',
-            8:  '8',
-            }
-
-        this.toggle_bg_color_palette = this.toggle_bg_color_palette.bind (this) 
-        this.create_bg_color_palette = this.create_bg_color_palette.bind (this) 
-        this.set_axes_visibility = this.set_axes_visibility.bind (this) 
-        this.set_axes_length = this.set_axes_length.bind (this) 
+        this.create_color_palette = this.create_color_palette.bind (this)
+        this.toggle_display = this.toggle_display.bind (this)
         }
 
-    create_bg_color_palette ()
+     toggle_display ()
         {
-        if  (! this.state.display_bg_palette)
+        this.setState ({display: ! this.state.display}) ;
+        }
+        
+    create_color_palette ()
+        {
+        if  (! this.state.display)
             {
             return (
                 <div className="op_action"  >
                     <Button
                         size="large"
                         type="ghost"
-                        onClick={this.toggle_bg_color_palette} 
+                        onClick={this.toggle_display} 
                         style={{border: "none"}}
                         >
                         <DownSquareOutlined style={{ fontSize: '32px'}}/>
@@ -902,15 +893,15 @@ class Options extends React.Component
         return (
             <div className="op_action"  >
                 <SketchPicker   
-                    onChangeComplete={ this.props.update_bg_color } 
-                    color={this.props.bgcolor}
+                    onChangeComplete={ this.props.update_color } 
+                    color={this.props.color}
                     disableAlpha={ true }
                     width={'60%'}
                     />
                 <Button
                     size="large"
                     type="ghost"
-                    onClick={this.toggle_bg_color_palette} 
+                    onClick={this.toggle_display} 
                     style={{border: "none"}}
                     >
                     <UpSquareOutlined style={{ fontSize: '32px'}}/>
@@ -920,9 +911,36 @@ class Options extends React.Component
             ) ;
         }
 
-    toggle_bg_color_palette ()
+    render ()
         {
-        this.setState ({display_bg_palette: ! this.state.display_bg_palette}) ;
+        const cp = this.create_color_palette ()
+        return (
+            <>
+                {cp}
+            </>
+            ) ;
+        }
+    }
+
+class Options extends React.Component
+    {
+    constructor (props)
+        {
+        super (props) ;
+        
+        this.marks = {
+            1:  '1',
+            2:  '2',
+            3:  '3',
+            4:  '4',
+            5:  '5',
+            6:  '6',
+            7:  '7',
+            8:  '8',
+            }
+
+        this.set_axes_visibility = this.set_axes_visibility.bind (this) 
+        this.set_axes_length = this.set_axes_length.bind (this) 
         }
 
     set_axes_visibility (visible)
@@ -939,7 +957,6 @@ class Options extends React.Component
 
     render ()
         {
-        const cp = this.create_bg_color_palette () ;
         return (
             <div className='grid' style={{gap: '1.2em'}}>
                 <div className='grid-row op-text grid-col-span'>
@@ -1055,7 +1072,10 @@ class Options extends React.Component
                         >
                         Set Background Color
                     </V_Tooltip>
-                    {cp}
+                    <Color_Select
+                        color={this.props.bgcolor}
+                        update_color={this.props.update_bg_color}
+                       />
                 </div>
                 <div className='grid-row op-text grid-col-span'>                    
                     <V_Tooltip    
@@ -1071,6 +1091,90 @@ class Options extends React.Component
                     <Switch 
                         onChange={this.props.toggle_show_sc_position}
                         checked={this.props.show_sc_position}
+                        />
+                </div>
+                <div className='grid-row op-text grid-col-span'>
+                    <V_Tooltip    
+                        align="right" 
+                        offset="200px"
+                        anchor_point="left"
+                        background={TT_BGCOLOR}                            
+                        text={`Display or hide the bowshock as a wireframe.`}
+                        >
+                        Display Bowshock as Wireframe
+                    </V_Tooltip>
+                    <Switch 
+                        onChange={(wf) =>{V3DSpace.set_bowshock_wf (wf) ; this.forceUpdate()}}
+                        checked={V3DSpace.bs_wf_view}
+                        />
+                </div>
+                <div className='grid-row op-text grid-col-span'>
+                    <V_Tooltip    
+                        align="right" 
+                        anchor_point="left"
+                        offset="200px"
+                        background={TT_BGCOLOR}                            
+                        text={`Select a color to use for the background (sky).`}
+                        >
+                        Set Bowshock Color
+                    </V_Tooltip>
+                    <Color_Select
+                        color={V3DSpace.bowshock_color}
+                        update_color={(c) => {V3DSpace.set_bowshock_color (c.hex) ; this.forceUpdate()}}
+                       />
+                </div>
+                <div className="grid-row op-text grid-col-span">
+                    Set Bowshock Opacity
+                    <InputNumber
+                        name={'opacity'}
+                        controls={true}
+                        defaultValue={V3DSpace.bs_opacity}
+                        min={0}
+                        step={0.05}
+                        max={1}
+                        onChange={(n) => {V3DSpace.set_bowshock_opacity (n) ; this.forceUpdate()}}
+                        />
+                </div>
+                <div className='grid-row op-text grid-col-span'>
+                    <V_Tooltip    
+                        align="right" 
+                        offset="200px"
+                        anchor_point="left"
+                        background={TT_BGCOLOR}                            
+                        text={`Display or hide the magnetopause as a wireframe.`}
+                        >
+                        Display Magnetopause as Wireframe
+                    </V_Tooltip>
+                    <Switch 
+                        onChange={(wf) =>{V3DSpace.set_magnetopause_wf (wf) ; this.forceUpdate()}}
+                        checked={V3DSpace.mag_wf_view}
+                        />
+                </div>
+                <div className='grid-row op-text grid-col-span'>
+                    <V_Tooltip    
+                        align="right" 
+                        anchor_point="left"
+                        offset="200px"
+                        background={TT_BGCOLOR}                            
+                        text={`Select a color to use for the background (sky).`}
+                        >
+                        Set Magnetopause Color
+                    </V_Tooltip>
+                    <Color_Select
+                        color={V3DSpace.mhd_color}
+                        update_color={(c) => {V3DSpace.set_magnetopause_color (c.hex) ; this.forceUpdate()}}
+                       />
+                </div>
+                <div className="grid-row op-text grid-col-span">
+                    Set Magnetopause Opacity
+                    <InputNumber
+                        name={'opacity'}
+                        controls={true}
+                        defaultValue={V3DSpace.mag_opacity}
+                        min={0}
+                        step={0.05}
+                        max={1}
+                        onChange={(n) => {V3DSpace.set_magnetopause_opacity (n) ; this.forceUpdate()}}
                         />
                 </div>
                 <div className='grid-row'>
@@ -2040,16 +2144,16 @@ class Base_Layout extends React.Component
     //    this.setState ({disp_width: width, disp_height: height})
     //    }
 
-    update_bg_color (color)
+    update_bg_color (hex)
         {
         // Calculate the new display text color.
-        V3DSpace.set_bg_color (color.hex)
+        V3DSpace.set_bg_color (hex)
 
         document.documentElement.style.setProperty("--txt_color", V3DSpace.text_color)
 
-        document.getElementById('bg').style.backgroundColor = color.hex
+        document.getElementById('bg').style.backgroundColor = hex
         
-        this.setState ({bgcolor: color.hex}) ;
+        this.setState ({bgcolor: hex}) ;
         }
 
     toggle_hide_time_control ()
