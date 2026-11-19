@@ -1664,7 +1664,7 @@ class display_space
 
             case 'offset' : 
 
-            this._xz_grid.set_grid_position (value, this.entity_manager.unit )
+                this._yz_grid.set_grid_position (value, this.entity_manager.unit )
             
                 break
 
@@ -1691,7 +1691,7 @@ class display_space
 
             case 'offset' : 
 
-            this._xz_grid.set_grid_position (value, this.entity_manager.unit)
+                this._xy_grid.set_grid_position (value, this.entity_manager.unit)
             
                 break
 
