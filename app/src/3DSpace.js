@@ -43,6 +43,60 @@ import { JN, SSC_WS } from './ssc_ws.js'
 import  Screen_Capture from './screen_capture.js'
 import Grid from './grids';
 import Axes from './Axes.js'
+import { fa } from 'zod/locales'
+
+const SCENE_STATE = {
+    version: 1,
+    restore_on_start: false,
+    axes: {
+        visible: false,
+        length: 0
+        },
+    bowshock: {
+        visible: false,
+        wireframe: false,
+        color: "#000000",
+        opacity: .0
+        },
+    magnetopause: {
+        visible: false,
+        wireframe: true,
+        color: "#000000",
+        opacity: .0
+        },
+    ambient_light: {
+        visible: false,
+        intensity: 0.0
+        },
+    terminator_line: false,
+    cam: DEFAULT_CAM,           // not used yet
+    hide_timeline: false,       // not used yet
+    hide_location: false,       // not used yet
+    frame: null,
+    time_start: 0,
+    time_end: 0,
+    sc: [],                     // not used yet
+    grids: {
+        xz: {
+            size: 0,
+            scale: 0,
+            offset: 0,
+            visible: false
+            },
+        yz: {
+            size: 0,
+            scale: 0,
+            offset: 0,
+            visible: false
+            },
+        xy: {
+            size: 0,
+            scale: 0,
+            offset: 0,
+            visible: false
+            }
+        }
+    }
 
 function ortho_camera_distance (d)
     {
@@ -264,6 +318,27 @@ class display_space
         this.update_xz_grid_options = this.update_xz_grid_options.bind (this)
         this.update_yz_grid_options = this.update_yz_grid_options.bind (this)
         this.update_xy_grid_options = this.update_xy_grid_options.bind (this)
+        this.set_axes_length = this.set_axes_length.bind (this)
+        this.set_axes_visibility = this.set_axes_visibility.bind (this)
+        this.get_scene_state = this.get_scene_state.bind (this)
+        this.hide_all_2D = this.hide_all_2D.bind (this)
+        this.set_ambient_light = this.set_ambient_light.bind (this)
+        this.set_ambient_intensity = this.set_ambient_intensity.bind (this)
+        this.display_terminator = this.display_terminator.bind (this)
+        this.set_start_time = this.set_start_time.bind (this)
+        this.set_end_time = this.set_end_time.bind (this)
+        this.set_magnetopause_visible = this.set_magnetopause_visible.bind (this)
+        this.set_bowshock_visible = this.set_bowshock_visible.bind (this)
+        this.set_magnetopause_wf = this.set_magnetopause_wf.bind (this)
+        this.set_bowshock_wf = this.set_bowshock_wf.bind (this)
+        this.set_magnetopause_color = this.set_magnetopause_color.bind (this)
+        this.set_bowshock_color = this.set_bowshock_color.bind (this)
+        this.set_magnetopause_opacity = this.set_magnetopause_opacity.bind (this)
+        this.set_bowshock_opacity = this.set_bowshock_opacity.bind (this)
+
+
+
+
 
         // Global object to store log messages
         window.log_messages = []
@@ -331,6 +406,9 @@ class display_space
         this._width = 0
         this._height = 0
 
+        // Create the scene state object
+        this._scene_state = SCENE_STATE
+
         // The target the camera is pointing at
         this._target_label = "none"
 
@@ -358,7 +436,7 @@ class display_space
         this._alt_z = false
 
         // Set the initial display rate to the base animation rate
-        this._rate = BASE_ANIM_RATE
+        this.speed (BASE_ANIM_RATE)
 
         // Time increment that is currently being processed
         this._delta = 0
@@ -382,6 +460,8 @@ class display_space
             this._camera = this._persp_camera ;
             }
 
+        this._scene_state.cam = DEFAULT_CAM  // Same value as in current state initialization
+
         this.update_camera_view ()
 
         // Add some lights to the scene
@@ -396,7 +476,9 @@ class display_space
         //this.scene.add (this._slight)
 
         // Create an ambient light so that all bodies are always partially illuminated.
-        this._alight = new THREE.AmbientLight (AMBIENT_COLOR, DEF_AMBIENT_INTENSITY)
+        this._alight = new THREE.AmbientLight (AMBIENT_COLOR)
+        this.set_ambient_intensity (DEF_AMBIENT_INTENSITY)
+        
         this.scene.add (this._alight)
 
         // Add the Earth.
@@ -406,22 +488,27 @@ class display_space
         this._axes = new Axes (this.scene, 1, this.entity_manager.unit)
         this._axes.update_axes ()
 
-        // Add the heliopause and bowshock meshes
+        // Update the scene_state object
+        this._scene_state.axes.visible = this._axes.visible 
+        this._scene_state.axes.length = this._axes.axes_length
+
+        // Add the magnetopause and bowshock meshes
         this._mhd = new MHDPause (this.scene, 'magnetopause') 
-        this._mhd.set_opacity (.25)
-        this._mhd.set_wire_frame (true)
+        this.set_magnetopause_color ("#3E1070")
+        this.set_magnetopause_opacity (.25)
+        this.set_magnetopause_wf (true)
         this._bowshock = new MHDBowshock (this.scene, 'bowshock') 
-        this._bowshock.set_opacity (.25)
-        this._bowshock.set_wire_frame (true)
+        this.set_bowshock_color ("#370544")
+        this.set_bowshock_opacity (.25)
+        this.set_bowshock_wf (true)
 
-        console.log("bowshock", this._bowshock)
-
-        this._mhd_visible = (this._mhd) ? this._mhd.visible : false
-        this._bowshock_visible = (this._bowshock) ? this._bowshock.visible : false
+        // I think they should always be invisible on intialization
+        this._scene_state.magnetopause.visible = (this._mhd) ? this._mhd.visible : false
+        this._scene_state.bowshock.visible = (this._bowshock) ? this._bowshock.visible : false
         
-        this._labels_visible_all = true
-        this._labels_visible_sc = true
-        this._labels_visible_planet = true
+        this.set_label_visible (true)
+        this.set_sc_label_visible (true)
+        this.set_planet_label_visible (true)
 
         // Create new xz grid 
         this._xz_grid = new Grid ('Z', 
@@ -436,7 +523,10 @@ class display_space
 
         this.scene.add (this._xz_grid)
 
-        this._xz_grid_visible = this._xz_grid.is_visible ()
+        this._scene_state.grids.xz.visible = this._xz_grid.is_visible ()
+        this._scene_state.grids.xz.size = this._xz_grid.requested_size
+        this._scene_state.grids.xz.scale = this._xz_grid.scale
+        this._scene_state.grids.xz.offset = this._xz_grid.offset
 
         // Create new yz grid 
         this._yz_grid = new Grid ('Z', 
@@ -451,7 +541,10 @@ class display_space
 
         this.scene.add (this._yz_grid)
 
-        this._yz_grid_visible = this._yz_grid.is_visible ()
+        this._scene_state.grids.yz.visible = this._yz_grid.is_visible ()
+        this._scene_state.grids.yz.size = this._yz_grid.requested_size
+        this._scene_state.grids.yz.scale = this._yz_grid.scale
+        this._scene_state.grids.yz.offset = this._yz_grid.offset
 
         // Create new xy grid 
         this._xy_grid = new Grid (
@@ -467,7 +560,10 @@ class display_space
 
         this.scene.add (this._xy_grid)
 
-        this._xy_grid_visible = this._xy_grid.is_visible ()
+        this._scene_state.grids.xy.visible = this._xy_grid.is_visible ()
+        this._scene_state.grids.xy.size = this._xy_grid.requested_size
+        this._scene_state.grids.xy.scale = this._xy_grid.scale
+        this._scene_state.grids.xy.offset = this._xy_grid.offset
 
         // Start up the clock
         this._clock = new Clock ()
@@ -773,6 +869,10 @@ class display_space
                     }
                 }
 
+            // Update the scene state.  Note this only effects planetary reference frames, not spacecraft
+            this._scene_state.frame = this.entity_manager.reference_frame
+
+
             return msg
             }
 
@@ -993,11 +1093,15 @@ class display_space
         {
         this._axes.update_axes_length (...args)
         this._axes.update_axes ()
+
+        this._scene_state.axes.length = this._axes.axes_length
         }
 
     set_axes_visibility (state = true)
         {
         this._axes.set_axes_visible (state)
+
+        this._scene_state.axes.visible = this._axes.visible
         }
 
     update_time ()
@@ -1207,6 +1311,11 @@ class display_space
         return this._mhd.diffuse_color
         }
 
+    get_scene_state ()
+        {
+        return JSON.parse (JSON.stringify (this._scene_state))
+        }
+
     get text_color ()
         {
         return this.entity_manager.text_color 
@@ -1329,6 +1438,7 @@ class display_space
 
     hide_all_2D (hide=false)
         {
+        // This is a temporary condition, so nothing done here should affect scene_state
         if  (hide)
             {
             this._xz_grid.set_grid_visible (false)
@@ -1342,19 +1452,18 @@ class display_space
 
             this.entity_manager.set_label_visible (false)
             this.entity_manager.set_orbit_visible (false)
-
-            
             }
 
         else
             {
-            this._xz_grid.set_grid_visible (this._xz_grid_visible)
-            this._yz_grid.set_grid_visible (this._yz_grid_visible)
-            this._xy_grid.set_grid_visible (this._xy_grid_visible)
-            if  (this._mhd) this._mhd.set_visibility (this._mhd_visible)
-            if  (this._bowshock) this._bowshock.set_visibility (this._bowshock_visible)
+            this._xz_grid.set_grid_visible (this._scene_state.grids.xz.visible)
+            this._yz_grid.set_grid_visible (this._scene_state.grids.yz.visible)
+            this._xy_grid.set_grid_visible (this._scene_state.grids.xy.visible)
 
-            this._axes.set_axes_visible ()
+            if  (this._mhd) this._mhd.set_visibility (this._scene_state.magnetopause.visible)
+            if  (this._bowshock) this._bowshock.set_visibility (this._scene_state.bowshock.visible)
+
+            this._axes.set_axes_visible (this._scene_state.axes.visible)
             this._axes.update_axes ()
 
             if  (! this._labels_visible_sc || ! this._labels_visible_planet)
@@ -1438,7 +1547,18 @@ class display_space
 
     set_ambient_light (val = true)
         {
+        // This just turns the ambient light on or off
         this._alight.visible = val
+
+        this._scene_state.ambient_light.visible = this._alight.visible
+        }
+    
+    set_ambient_intensity (val = DEF_AMBIENT_INTENSITY)
+        {
+        // Set ambient light intensity
+        this._alight.intensity = val
+
+        this._scene_state.ambient_light.intensity = this._alight.intensity
         }
 
     add_spacecraft (...args)
@@ -1453,9 +1573,15 @@ class display_space
 
     display_terminator (d = true)
         {
-        this._alight.intensity = (d)? DIM_AMBIENT_INTENSITY : DEF_AMBIENT_INTENSITY
+        const intensity = (d)? DIM_AMBIENT_INTENSITY : DEF_AMBIENT_INTENSITY
 
-        return this.entity_manager.display_terminator (d)
+        this.set_ambient_intensity (intensity)
+
+        const r = this.entity_manager.display_terminator (d)
+
+        this._scene_state.terminator_line = this.entity_manager.terminator_line
+
+        return r
         }
 
     remove  (id)
@@ -1479,6 +1605,8 @@ class display_space
     set_start_time (...args)
         {
         this.entity_manager.set_start_time (...args)
+
+        this._scene_state.time_start = this.entity_manager.start_time   
         // *** h.update_axes (this.entity_manager.time, this.entity_manager.coord_system, this.entity_manager.reference_frame) 
         this.update_grids ()
 
@@ -1559,64 +1687,114 @@ class display_space
 
     set_magnetopause_visible (visible)
         {
-        if  (this._mhd) this._mhd.set_visibility (visible)
-        this._mhd_visible = (this._mhd) ? this._mhd.visible : false
+        if  (this._mhd) 
+            {
+            this._mhd.set_visibility (visible)
+
+            this._scene_state.magnetopause.visible = this._mhd.visible
+
+            return
+            }
+
+        // this._mhd_visible = (this._mhd) ? this._mhd.visible : false
+        this._scene_state.magnetopause.visible = false
         }
 
     set_bowshock_visible (visible)
         {
-        if  (this._bowshock) this._bowshock.set_visibility (visible)  // Do I really need this flag?
-        this._bowshock_visible = (this._bowshock) ? this._bowshock.visible : false
+        if  (this._bowshock) // Do I really need this flag?
+            {
+            this._bowshock.set_visibility (visible)  
+
+            this._scene_state.bowshock.visible = this._bowshock.visible
+
+            return
+            }
+
+        // this._bowshock_visible = (this._bowshock) ? this._bowshock.visible : false
+        this._scene_state.bowshock.visible = false
         }
 
     set_magnetopause_wf (wf = true)
         {
-        if  (this._mhd) this._mhd.set_wire_frame (wf)
+        if  (this._mhd)
+            {
+            this._mhd.set_wire_frame (wf)
+
+            this._scene_state.magnetopause.wireframe = this._mhd.wf_view
+            }
         }
 
     set_bowshock_wf (wf = true)
         {
-        if  (this._bowshock) this._bowshock.set_wire_frame (wf)
+        if  (this._bowshock)
+            {
+            this._bowshock.set_wire_frame (wf)
+
+            this._scene_state.bowshock.wireframe = this._bowshock.wf_view
+            }
         }
 
     set_magnetopause_color (color)
         {
         const clr = convert_to_number (color)
-        if  (this._mhd) this._mhd.set_color (clr)
+
+        if  (this._mhd)
+            {
+            this._mhd.set_color (clr)
+
+            this._scene_state.magnetopause.color = this._mhd.diffuse_color
+            }
         }
 
     set_bowshock_color (color)
         {
         const clr = convert_to_number (color)
-        if  (this._bowshock) this._bowshock.set_color (clr)
+
+        if  (this._bowshock)
+            {
+            this._bowshock.set_color (clr)
+
+            this._scene_state.bowshock.color = this._bowshock.diffuse_color
+            }
         }
 
     set_magnetopause_opacity (opacity)
         {
-        if  (this._mhd) this._mhd.set_opacity (opacity)
+        if  (this._mhd)
+            {
+            this._mhd.set_opacity (opacity)
+
+            this._scene_state.magnetopause.opacity = this._mhd.opacity
+            }
         }
 
     set_bowshock_opacity (opacity)
         {
-        if  (this._bowshock) this._bowshock.set_opacity (opacity)
+        if  (this._bowshock)
+            {
+            this._bowshock.set_opacity (opacity)
+
+            this._scene_state.bowshock.opacity = this._bowshock.opacity
+            }
         }
 
     toggle_xz_grid_visible ()
         {
         this._xz_grid.set_grid_visible (! this._xz_grid.is_visible ())
-        this._xz_grid_visible = this._xz_grid.is_visible ()
+        this._scene_state.grids.xz.visible = this._xz_grid.is_visible ()
         }
 
     toggle_yz_grid_visible ()
         {
         this._yz_grid.set_grid_visible (! this._yz_grid.is_visible ())
-        this._yz_grid_visible = this._yz_grid.is_visible ()
+        this._scene_state.grids.yz.visible = this._yz_grid.is_visible ()
         }
 
     toggle_xy_grid_visible ()
         {
         this._xy_grid.set_grid_visible (! this._xy_grid.is_visible ())
-        this._xy_grid_visible = this._xy_grid.is_visible ()
+        this._scene_state.grids.xy.visible = this._xy_grid.is_visible ()
         }
 
     update_xz_grid_options (option, value)
@@ -1626,18 +1804,24 @@ class display_space
             case 'size' : 
 
                 this._xz_grid.set_requested_size (value)
+
+                this._scene_state.grids.xz.size = this._xz_grid.requested_size
                 
                 break
 
             case 'scale' : 
 
                 this._xz_grid.set_scale (value)
+
+                this._scene_state.grids.xz.scale = this._xz_grid.scale
                 
                 break
 
             case 'offset' : 
 
                 this._xz_grid.set_grid_position (value, this.entity_manager.unit )
+
+                this._scene_state.grids.xz.offset = this._xz_grid.offset
                 
                 break
 
@@ -1653,18 +1837,24 @@ class display_space
             case 'size' : 
 
                 this._yz_grid.set_requested_size (value)
+
+                this._scene_state.grids.yz.size = this._yz_grid.requested_size
                 
                 break
 
             case 'scale' : 
 
                 this._yz_grid.set_scale (value)
+
+                this._scene_state.grids.yz.scale = this._yz_grid.scale
                 
                 break
 
             case 'offset' : 
 
                 this._yz_grid.set_grid_position (value, this.entity_manager.unit )
+
+                this._scene_state.grids.yz.offset = this._yz_grid.offset
             
                 break
 
@@ -1680,18 +1870,24 @@ class display_space
             case 'size' : 
 
                 this._xy_grid.set_requested_size (value)
+
+                this._scene_state.grids.xy.size = this._xy_grid.requested_size
                 
                 break
 
             case 'scale' : 
 
                 this._xy_grid.set_scale (value)
+
+                this._scene_state.grids.xy.scale = this._xy_grid.scale
                 
                 break
 
             case 'offset' : 
 
                 this._xy_grid.set_grid_position (value, this.entity_manager.unit)
+
+                this._scene_state.grids.xy.offset = this._xy_grid.offset
             
                 break
 
@@ -1713,6 +1909,8 @@ class display_space
     set_end_time (...args)
         {
         this.entity_manager.set_end_time (...args)
+
+        this._scene_state.time_end = this.entity_manager.end_time
         }
 
     n_entities (...args)

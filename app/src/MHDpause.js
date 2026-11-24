@@ -750,7 +750,7 @@ export class MHDPause extends MHD
             super (scene, name) 
             }
 
-        this.set_parameters (mode, 2.0, 0., 360., "rgb(62, 16, 112)" ) ;
+        this.set_parameters (mode, 2.0, 0., 360., "rgb(255, 255, 255)" ) ;
         }
     
     //MHDPause(MagnetopauseWindow magWind) 
@@ -1003,7 +1003,7 @@ export class MHDBowshock extends MHD
 
         //this.set_parameters (2.0, 0., 360., "violet", [0, 0.851, 0] ) ;
         //this.set_parameters (2.0, 0., 360., "hsl(300, 76.1%, 72.2%)", "hsl(300, 50%, 72.2%)" ) ;
-        this.set_parameters (mode, 2.0, 0., 360., "rgb(55, 5, 68)")
+        this.set_parameters (mode, 2.0, 0., 360., "rgb(255, 255, 255)")
         }
 
     set_parameters_from_dialog (bowWind) 

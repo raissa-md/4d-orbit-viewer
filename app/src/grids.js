@@ -343,6 +343,16 @@ class Grid extends THREE.LineSegments
         return this.material.visible 
         }
 
+    get requested_size ()
+        {
+        return this._req_size
+        }
+
+    get scale ()
+        {
+        return this._scale
+        }
+
     get offset ()
         {
         return this._offset
